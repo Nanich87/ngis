@@ -1,0 +1,20 @@
+<div class="row">
+    <h2><span class="fa">&#xf15b;</span> {{ file.title }}</h2>
+</div>
+<div class="row">
+    <ul class="breadcrumb">
+        <li><a href="/#/">Начало</a></li>
+        <li><a href="/#/projects">Обекти</a></li>
+        <li><a href="/#/project/view/{{ project.name }}/{{ project.id }}">{{ project.displayName }}</a></li>
+        <li class="active">{{ file.title }}</li>
+    </ul>
+</div>
+<div class="row text-right">
+    <div class="btn-group">
+        <a href="#" id="ux-btn-save" class="btn btn-success"><span class="fa">&#xf0c7;</span> Запис</a>
+        <a href="#" id="ux-btn-delete" class="btn btn-danger"><span class="fa">&#xf00d;</span> Изтриване</a>
+    </div>
+</div>
+<div class="row">
+    <textarea class="form-control" rows="15" id="content">{{ file.content }}</textarea>
+</div>

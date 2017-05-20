@@ -1,0 +1,40 @@
+<div class="row">
+    <h2>Контролен панел</h2>
+</div>
+<div class="row">
+    <ul class="breadcrumb">
+        <li><a href="/#/">Начало</a></li>
+        <li class="active">Контролен панел</li>
+    </ul>
+</div>
+<div class="well">
+    <form id="user-rights" class="form-horizontal">
+        <fieldset>
+            <legend><span class="fa">&#xf044;</span> Редактиране правата на потребител</legend>
+            <div class="form-group">
+                <label for="id" class="col-md-2 control-label">UID</label>
+                <div class="col-md-10">
+                    <input class="form-control" id="user-id" placeholder="" type="text" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label">Права</label>
+                <div class="col-md-10">
+                    <div class="radio">
+                        <label><input name="rights" value="read" checked="" type="radio" /> Четене</label>
+                    </div>
+                    <div class="radio">
+                        <label><input name="rights" value="write" type="radio" /> Запис</label>
+                    </div>
+                    <div class="radio">
+                        <label><input name="rights" value="both" type="radio" /> Четене и запис</label>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </form>
+    <p class="text-right">
+        <button type="button" id="ux-btn-add-rights" class="btn btn-success"><span class="fa">&#xf067;</span> Добавяне</button>
+        <button type="button" id="ux-btn-remove-rights" class="btn btn-danger"><span class="fa">&#xf00d;</span> Премахване</button>
+    </p>
+</div>

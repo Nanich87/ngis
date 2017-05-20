@@ -1,0 +1,61 @@
+{{#if notAuthorized}}
+<div class="row">
+    <div class="alert alert-dismissible alert-danger">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <strong>Access Denided!</strong> You are not authorized to use this page.
+    </div>
+</div>
+{{else}}
+<div class="row">
+    <h2><span class="fa">&#xf007;</span> <span id="titleName">{{ user.displayName }}</span></h2>
+</div>
+<div class="row">
+    <div class="col-md-3">
+        <a href="/#/user" class="thumbnail">
+            <img src="images/user.png" alt="{{ user.email }}" />
+        </a> {{#if isAdmin}}
+        <p class="text-center"><a href="/#/admin" class="btn btn-primary"><span class="fa">&#xf21b;</span> Контролен панел</a></p>
+        {{/if}}
+    </div>
+    <div class="col-md-9">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th colspan="2"><span class="fa">&#xf2bb;</span> Потребителски данни</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Email</td>
+                    <td>
+                        <input class="form-control" id="email" value="{{ user.email }}" disabled="" type="email" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>ID</td>
+                    <td>
+                        <input class="form-control" id="uid" value="{{ user.uid }}" disabled="" type="text" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>Име</td>
+                    <td>
+                        <input class="form-control" id="displayName" value="{{ user.displayName }}" type="text" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>Снимка (URL)</td>
+                    <td>
+                        <input class="form-control" id="photoURL" value="{{ user.photoURL }}" type="url" />
+                    </td>
+                </tr>
+                <tfoot>
+                    <tr>
+                        <td colspan="2" class="text-right"><button id="ux-btn-save" class="btn btn-success"><span class="fa">&#xf0c7;</span> Запис</button></td>
+                    </tr>
+                </tfoot>
+            </tbody>
+        </table>
+    </div>
+</div>
+{{/if}}

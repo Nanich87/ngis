@@ -1,0 +1,15 @@
+{
+  "rules": {
+    ".read": "auth != null && root.child('access').child('read').hasChild(auth.uid)",
+    ".write": "auth != null && root.child('access').child('write').hasChild(auth.uid)",
+    "access": {
+      ".write": "root.child('groups').child('admins').hasChild(auth.uid)"
+    },
+    "projects": {
+      ".write": "root.child('groups').child('admins').hasChild(auth.uid)",
+      "$project": {
+        ".validate": "newData.hasChildren(['name', 'year']) && newData.child('name').isString() && newData.child('name').val().matches(/^[a-zA-Z0-9-]{3,20}$/) && newData.child('year').isString() && newData.child('year').val().matches(/^(19|20)[0-9][0-9]$/)"
+      }
+    }
+  }
+}

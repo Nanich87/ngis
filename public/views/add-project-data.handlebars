@@ -1,0 +1,24 @@
+<div class="row">
+    <h2><span class="fa">&#xf15b;</span> {{ displayName }}</h2>
+</div>
+<div class="row">
+    <ul class="breadcrumb">
+        <li><a href="/#/">Начало</a></li>
+        <li><a href="/#/projects">Обекти</a></li>
+        <li><a href="/#/project/view/{{ name }}/{{ id }}">{{ displayName }}</a></li>
+        <li class="active">Добавяне на данни</li>
+    </ul>
+</div>
+<div class="row">
+    <h3><span class="fa">&#xf1c9;</span> Добавяне на файл</h3>
+    <div class="well">
+        <div class="row">
+            <div class="col-md-9">
+                <input id="file" type="file" />
+            </div>
+            <div class="col-md-3">
+                <button type="button" id="ux-btn-upload-file" class="btn btn-primary"><span class="fa">&#xf093;</span> Добавяне</button>
+            </div>
+        </div>
+    </div>
+</div>
