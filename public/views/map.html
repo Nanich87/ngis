@@ -1,6 +1,38 @@
-<div id="map" class="row">
-    <div id="popup" class="ol-popup">
-        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
-        <div id="popup-content" class="ol-popup-content"></div>
+<div class="map-layout">
+    <aside id="map-sidebar" class="offcanvas-lg offcanvas-start map-sidebar" tabindex="-1" aria-labelledby="map-sidebar-title">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title" id="map-sidebar-title">Слоеве</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#map-sidebar" aria-label="Затваряне"></button>
+        </div>
+        <div class="offcanvas-body map-sidebar-body">
+            <section class="sidebar-section">
+                <h2 class="sidebar-heading">Подложка</h2>
+                <div id="base-map-options" class="btn-group btn-group-sm w-100" role="group" aria-label="Подложка"></div>
+            </section>
+
+            <section class="sidebar-section sidebar-section-grow">
+                <h2 class="sidebar-heading">Обекти</h2>
+                <input id="project-filter" type="search" class="form-control form-control-sm mb-2" placeholder="Търсене по име…" aria-label="Търсене на обект" />
+                <div id="project-tree" class="project-tree">
+                    <div class="text-body-secondary small py-2"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Зареждане…</div>
+                </div>
+            </section>
+
+            <section class="sidebar-section">
+                <h2 class="sidebar-heading">Легенда</h2>
+                <ul id="map-legend" class="map-legend list-unstyled mb-0"></ul>
+            </section>
+        </div>
+    </aside>
+
+    <div class="map-wrapper">
+        <button type="button" class="btn btn-sm btn-primary d-lg-none map-sidebar-toggle" data-bs-toggle="offcanvas" data-bs-target="#map-sidebar" aria-controls="map-sidebar">
+            <span class="fa">&#xf0c9;</span> Слоеве
+        </button>
+        <div id="map" class="map"></div>
+        <div id="popup" class="ol-popup">
+            <a href="#" id="popup-closer" class="ol-popup-closer" aria-label="Затваряне"></a>
+            <div id="popup-content" class="ol-popup-content"></div>
+        </div>
     </div>
 </div>

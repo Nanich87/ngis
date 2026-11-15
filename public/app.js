@@ -26,6 +26,17 @@
     });
 
     let app = Sammy(container, function () {
+        // Reset per-page layout state; the map controller re-enables it.
+        this.before(function () {
+            $('body').removeClass('page-map');
+
+            let menu = document.getElementById('app-navbar-menu');
+
+            if (menu && menu.classList.contains('show')) {
+                bootstrap.Collapse.getOrCreateInstance(menu).hide();
+            }
+        });
+
         this.get('#/', function () {
             this.redirect('#/map');
         });

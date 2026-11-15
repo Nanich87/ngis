@@ -1,36 +1,226 @@
-html {
-    position: relative;
-    min-height: 100%;
+/* ------------------------------------------------------------------ tokens */
+
+:root {
+    --ngis-panel-bg: #0d0d0d;
+    --ngis-popup-bg: #1b1b1b;
+    --ngis-border: #2a2a2a;
+    --ngis-muted: #8a8a8a;
 }
+
+/* ------------------------------------------------------------------ layout */
 
 body {
-    /* Margin bottom by footer height */
-    margin-bottom: 60px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-.footer {
-    position: absolute;
-    bottom: 0;
+#content {
+    flex: 1 0 auto;
+}
+
+/* Kept for the controllers that toggle visibility with jQuery. */
+.app-navbar {
+    border-bottom: 1px solid var(--ngis-border);
+}
+
+.map-sidebar.offcanvas-lg {
+    --bs-offcanvas-bg: var(--ngis-panel-bg);
+    --bs-offcanvas-color: var(--bs-body-color);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ------------------------------------------------------------------ full-bleed map page */
+
+body.page-map {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+body.page-map #content {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-width: none;
     width: 100%;
-    /* Set the fixed height of the footer here */
-    height: 60px;
+    margin: 0;
+    padding: 0 !important;
 }
 
-.container .text-muted {
-    margin: 20px 0;
+body.page-map .footer {
+    display: none;
 }
+
+.map-layout {
+    display: flex;
+    height: 100%;
+}
+
+.map-wrapper {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.map {
+    position: absolute;
+    inset: 0;
+}
+
+.map-sidebar-toggle {
+    position: absolute;
+    top: .5rem;
+    left: 2.75rem;
+    z-index: 2;
+}
+
+/* ------------------------------------------------------------------ sidebar */
+
+@media (min-width: 992px) {
+    .map-sidebar {
+        width: 320px;
+        flex: 0 0 320px;
+        border-right: 1px solid var(--ngis-border);
+        background-color: var(--ngis-panel-bg);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+}
+
+.map-sidebar .map-sidebar-body {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0;
+    padding: 0 !important;
+    overflow-y: auto !important;
+}
+
+.sidebar-section {
+    padding: .875rem 1rem;
+    border-bottom: 1px solid var(--ngis-border);
+}
+
+.sidebar-section:last-child {
+    border-bottom: 0;
+}
+
+.sidebar-section-grow {
+    flex: 1 0 auto;
+}
+
+.sidebar-heading {
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ngis-muted);
+    margin-bottom: .625rem;
+}
+
+#base-map-options .btn {
+    font-size: .75rem;
+    white-space: nowrap;
+}
+
+.project-item + .project-item {
+    border-top: 1px solid var(--ngis-border);
+}
+
+.project-row,
+.layer-row,
+.legend-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+}
+
+.project-row {
+    padding: .375rem 0;
+}
+
+.project-row .form-check-input,
+.layer-row .form-check-input {
+    flex-shrink: 0;
+    margin-top: 0;
+}
+
+.project-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.project-row .btn-link,
+.layer-row .btn-link {
+    padding: 0 .25rem;
+    color: var(--ngis-muted);
+}
+
+.project-row .btn-link:hover,
+.layer-row .btn-link:hover {
+    color: var(--bs-body-color);
+}
+
+.layer-list {
+    margin: 0 0 .5rem 1.5rem;
+}
+
+.layer-row {
+    padding: .1875rem 0;
+    font-size: .875rem;
+}
+
+.layer-row .form-check-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.layer-count {
+    font-size: .75rem;
+    color: var(--ngis-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.legend-row {
+    padding: .1875rem 0;
+    font-size: .875rem;
+}
+
+.legend-swatch {
+    display: inline-flex;
+    flex: 0 0 24px;
+    justify-content: center;
+    background: rgba(255, 255, 255, .85);
+    border-radius: 3px;
+}
+
+.legend-label {
+    flex: 1 1 auto;
+}
+
+/* ------------------------------------------------------------------ popup */
 
 .ol-popup {
     position: absolute;
-    min-width: 180px;
-    background-color: white;
-    -webkit-filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.2));
-    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.2));
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
+    min-width: 220px;
+    max-width: 320px;
+    background-color: var(--ngis-popup-bg);
+    color: var(--bs-body-color);
+    box-shadow: 0 .25rem 1rem rgba(0, 0, 0, .5);
+    padding: .75rem 1rem;
+    border-radius: var(--bs-border-radius-lg);
+    border: 1px solid var(--ngis-border);
     bottom: 12px;
     left: -50px;
+    font-size: .875rem;
 }
 
 .ol-popup:after,
@@ -45,14 +235,14 @@ body {
 }
 
 .ol-popup:after {
-    border-top-color: white;
+    border-top-color: var(--ngis-popup-bg);
     border-width: 10px;
     left: 48px;
     margin-left: -10px;
 }
 
 .ol-popup:before {
-    border-top-color: #cccccc;
+    border-top-color: var(--ngis-border);
     border-width: 11px;
     left: 48px;
     margin-left: -11px;
@@ -61,18 +251,51 @@ body {
 .ol-popup-closer {
     text-decoration: none;
     position: absolute;
-    top: 2px;
-    right: 8px;
+    top: .375rem;
+    right: .625rem;
+    color: var(--ngis-muted);
+}
+
+.ol-popup-closer:hover {
+    color: var(--bs-body-color);
 }
 
 .ol-popup-closer:after {
     content: "✖";
 }
 
-.ol-popup-content h3 {
-    color: #000000;
+.ol-popup-title {
+    font-weight: 600;
+    font-size: 1rem;
+    padding-right: 1.25rem;
 }
 
-.ol-popup-content h5 {
-    color: #3d3d3d;
+.ol-popup-layer {
+    color: var(--ngis-muted);
+    font-size: .75rem;
+    margin-bottom: .5rem;
+}
+
+.ol-popup-props {
+    width: 100%;
+}
+
+.ol-popup-props th {
+    color: var(--ngis-muted);
+    font-weight: normal;
+    padding: .125rem .75rem .125rem 0;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.ol-popup-props td {
+    padding: .125rem 0;
+    word-break: break-word;
+}
+
+/* Keep the map controls readable on dark and light base maps. */
+.ol-scale-line {
+    left: auto;
+    right: .5em;
+    bottom: 2.5em;
 }

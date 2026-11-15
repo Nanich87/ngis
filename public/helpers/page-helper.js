@@ -3,8 +3,11 @@
 let pageHelper = (function () {
 
     function setActivePage(page) {
-        $('.nav').find('li.active').removeClass('active');
-        $('.nav li[data-id="' + page + '"]').addClass('active');
+        $('#app-navbar .nav-link').removeClass('active').removeAttr('aria-current');
+        $('#app-navbar .nav-link[data-id="' + page + '"]').addClass('active').attr('aria-current', 'page');
+
+        // The map page is full-bleed (no container, no footer).
+        $('body').toggleClass('page-map', page === 'map');
     }
 
     return {

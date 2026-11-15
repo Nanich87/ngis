@@ -2,11 +2,11 @@
     <h2><span class="fa">&#xf15b;</span> {{ displayName }}</h2>
 </div>
 <div class="row">
-    <ul class="breadcrumb">
-        <li><a href="/#/">Начало</a></li>
-        <li><a href="/#/projects">Обекти</a></li>
-        <li class="active">{{ displayName }}</li>
-    </ul>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/#/">Начало</a></li>
+        <li class="breadcrumb-item"><a href="/#/projects">Обекти</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ displayName }}</li>
+    </ol></nav>
 </div>
 <div class="row">
     <div class="col-md-6">
@@ -35,7 +35,7 @@
             </a>
             {{/each}}
         </div>
-        <div class="row text-right">
+        <div class="row text-end">
             <a href="/#/project/add/{{ displayName }}/{{ id }}" class="btn btn-primary"><span class="fa">&#xf067;</span> Добавяне</a>
         </div>
     </div>

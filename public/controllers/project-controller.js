@@ -44,10 +44,10 @@ let projectController = (function () {
     }
 
     function addProjectToList(listSelector, projectID, projectName) {
-        let actionLink1 = $(document.createElement('a')).text('Карта').attr('class', 'btn btn-success btn-xs').attr('href', '/#/map/' + projectID);
-        let actionLink2 = $(document.createElement('a')).text('Изтриване').attr('class', 'btn btn-danger btn-xs').attr('href', '/#/project/delete/' + projectID);
+        let actionLink1 = $(document.createElement('a')).text('Карта').attr('class', 'btn btn-success btn-sm').attr('href', '/#/map/' + projectID);
+        let actionLink2 = $(document.createElement('a')).text('Изтриване').attr('class', 'btn btn-outline-danger btn-sm').attr('href', '/#/project/delete/' + projectID);
 
-        let actionLinkGroup = $(document.createElement('div')).attr('class', 'btn-group btn-group-justified').append(actionLink1);
+        let actionLinkGroup = $(document.createElement('div')).attr('class', 'btn-group').append(actionLink1);
 
         if (isAdmin) {
             actionLinkGroup.append(actionLink2);
@@ -56,7 +56,7 @@ let projectController = (function () {
         let title = $(document.createElement('a')).text(projectName).attr('class', 'btn btn-link').attr('href', '/#/project/view/' + projectName.toLowerCase() + '/' + projectID);
 
         let tableData1 = $(document.createElement('td')).append(title);
-        let tableData2 = $(document.createElement('td')).css('vertical-align', 'middle').append(actionLinkGroup);
+        let tableData2 = $(document.createElement('td')).addClass('text-center align-middle').append(actionLinkGroup);
         let tableRow = $(document.createElement('tr')).append(tableData1).append(tableData2);
 
         $(listSelector).append(tableRow);

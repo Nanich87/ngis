@@ -1,7 +1,7 @@
 {{#if notAuthorized}}
 <div class="row">
     <div class="alert alert-dismissible alert-danger">
-        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Затваряне"></button>
         <strong>Access Denided!</strong> You are not authorized to use this page.
     </div>
 </div>
@@ -10,10 +10,10 @@
     <h2><span class="fa">&#xf1c0;</span> Обекти</h2>
 </div>
 <div class="row">
-    <ul class="breadcrumb">
-        <li><a href="/#/">Начало</a></li>
-        <li class="active">Обекти</li>
-    </ul>
+    <nav aria-label="breadcrumb"><ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/#/">Начало</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Обекти</li>
+    </ol></nav>
 </div>
 <div class="row">
     <div class="col-md-6">
@@ -21,20 +21,20 @@
         <h3><span class="fa">&#xf055;</span> Създаване на нов обект</h3>
         <form id="ux-form-project" class="form-horizontal">
             <fieldset>
-                <div class="form-group">
-                    <label for="name" class="col-md-3 control-label">Име</label>
+                <div class="row mb-3">
+                    <label for="name" class="col-md-3 col-form-label">Име</label>
                     <div class="col-md-9">
                         <input class="form-control" id="name" placeholder="Име на обект" type="text" />
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="year" class="col-md-3 control-label">Година</label>
+                <div class="row mb-3">
+                    <label for="year" class="col-md-3 col-form-label">Година</label>
                     <div class="col-md-9">
                         <input class="form-control" id="year" placeholder="Година" type="number" />
                     </div>
                 </div>
-                <div class="form-group">
-                    <div class="col-md-9 col-md-offset-3">
+                <div class="row mb-3">
+                    <div class="col-md-9 offset-md-3">
                         <button type="button" id="ux-btn-create-project" class="btn btn-primary"><span class="fa">&#xf067;</span> Създаване</button>
                     </div>
                 </div>
