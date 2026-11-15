@@ -299,6 +299,19 @@ def delete_layer(req):
 # --------------------------------------------------------------------------- HTTP handler
 
 class Handler(SimpleHTTPRequestHandler):
+    # Always declare UTF-8 for text assets so Cyrillic is decoded correctly.
+    extensions_map = {
+        **SimpleHTTPRequestHandler.extensions_map,
+        '.html': 'text/html; charset=utf-8',
+        '.handlebars': 'text/html; charset=utf-8',
+        '.js': 'application/javascript; charset=utf-8',
+        '.css': 'text/css; charset=utf-8',
+        '.json': 'application/json; charset=utf-8',
+        '.svg': 'image/svg+xml',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2',
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=PUBLIC_DIR, **kwargs)
 

@@ -1,0 +1,199 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "building",
+        "name": "Храм-паметник „Св. Александър Невски“"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              2597284.1,
+              5265859.26
+            ],
+            [
+              2597495.6,
+              5265859.26
+            ],
+            [
+              2597495.6,
+              5265738.09
+            ],
+            [
+              2597284.1,
+              5265738.09
+            ],
+            [
+              2597284.1,
+              5265859.26
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "НДК"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              2595636.57,
+              5264269.03
+            ],
+            [
+              2596059.58,
+              5264269.03
+            ],
+            [
+              2596059.58,
+              5263951.02
+            ],
+            [
+              2595636.57,
+              5263951.02
+            ],
+            [
+              2595636.57,
+              5264269.03
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "axis",
+        "name": "бул. „Витоша“"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            2596137.5,
+            5265889.56
+          ],
+          [
+            2596003.92,
+            5265359.45
+          ],
+          [
+            2595892.6,
+            5264829.37
+          ],
+          [
+            2595803.55,
+            5264299.32
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "ЖП линия София – Пловдив (приблизително)"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            2596115.24,
+            5268313.3
+          ],
+          [
+            2605989.28,
+            5261876.61
+          ],
+          [
+            2627139.98,
+            5245237.37
+          ],
+          [
+            2651296.31,
+            5226213.88
+          ],
+          [
+            2685026.12,
+            5193240.01
+          ],
+          [
+            2721761.55,
+            5186478.73
+          ],
+          [
+            2754600.8,
+            5181523.52
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "overpass",
+        "intersection_number": "П-1",
+        "railroad_station": "гара София",
+        "name": "Надлез при Централна гара София"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2596115.24,
+          5268313.3
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "underpass",
+        "intersection_number": "ПП-2",
+        "railroad_station": "гара Пловдив",
+        "name": "Подлез при Централна гара Пловдив"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2754600.8,
+          5181523.52
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Античен театър – Пловдив"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2755268.72,
+          5183024.83
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "r-zone-text",
+        "text": "А",
+        "name": "Зона А – Варна"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3107450.19,
+          5344617.04
+        ]
+      }
+    }
+  ]
+}
