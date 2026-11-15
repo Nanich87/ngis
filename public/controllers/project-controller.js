@@ -416,6 +416,16 @@ let projectController = (function () {
                 renderRawJson(file.content);
 
                 if (stats.valid) {
+                    let crs = map.unsupportedCrs(geojson);
+
+                    $('#projection-info').text(crs
+                        ? 'Непозната координатна система: ' + crs
+                        : (map.detectProjection(geojson) === 'EPSG:4326' ? 'WGS84 (EPSG:4326)' : 'Web Mercator (EPSG:3857)'));
+
+                    if (crs) {
+                        $('#crs-warning').removeClass('hidden').find('.crs-name').text(crs);
+                    }
+
                     try {
                         renderFilePreview(geojson);
                     } catch (e) {

@@ -150,7 +150,7 @@ let mapController = (function () {
             });
 
             zoom.on('click', function () {
-                let ids = (projectState[project.id] ? projectState[project.id].layers : []).map(l => l.id);
+                let ids = zoomableLayerIds(projectState[project.id]);
 
                 if (!map.zoomToLayers(ids)) {
                     toastr.info('Обектът няма данни за показване.');
@@ -207,8 +207,15 @@ let mapController = (function () {
 
             layers.forEach(function (layer) {
                 try {
-                    map.addLayer(layer.id, layer.title, JSON.parse(layer.content));
-                    state.layers.push({ id: layer.id, title: layer.title });
+                    let geojson = JSON.parse(layer.content);
+                    let crs = map.unsupportedCrs(geojson);
+
+                    map.addLayer(layer.id, layer.title, geojson);
+                    state.layers.push({ id: layer.id, title: layer.title, unsupportedCrs: crs });
+
+                    if (crs) {
+                        toastr.warning('Файлът „' + layer.title + '“ е в координатна система ' + crs + ', която не се поддържа. Може да се покаже на грешно място.');
+                    }
                 } catch (e) {
                     toastr.warning('Файлът „' + layer.title + '“ не може да бъде показан.');
                 }
@@ -221,8 +228,8 @@ let mapController = (function () {
             state.layers.forEach(layer => map.setLayerVisible(layer.id, visibleNow));
             item.find('.layer-toggle').prop('checked', visibleNow);
 
-            if (visibleNow && zoomAfterLoad && state.layers.length > 0) {
-                map.zoomToLayers(state.layers.map(l => l.id));
+            if (visibleNow && zoomAfterLoad) {
+                map.zoomToLayers(zoomableLayerIds(state));
             }
         }, function (error) {
             state.loading = false;
@@ -231,6 +238,11 @@ let mapController = (function () {
 
             toastr.error(error.message);
         });
+    }
+
+    // Layers in an unsupported CRS would stretch the extent to the wrong place.
+    function zoomableLayerIds(state) {
+        return (state ? state.layers : []).filter(l => !l.unsupportedCrs).map(l => l.id);
     }
 
     function renderLayerList(projectId, item) {
@@ -265,7 +277,15 @@ let mapController = (function () {
                 }
             });
 
-            list.append($('<li class="layer-row"></li>').append(checkbox, label, meta, zoom));
+            let row = $('<li class="layer-row"></li>').append(checkbox, label);
+
+            if (layer.unsupportedCrs) {
+                row.append($('<span class="fa text-warning layer-warning" role="img">&#xf071;</span>')
+                    .attr('title', 'Непозната координатна система: ' + layer.unsupportedCrs)
+                    .attr('aria-label', 'Непозната координатна система: ' + layer.unsupportedCrs));
+            }
+
+            list.append(row.append(meta, zoom));
         });
     }
 

@@ -54,6 +54,12 @@ let userController = (function () {
 
                     return false;
                 });
+
+                $('#password-form').on('submit', function () {
+                    changePassword();
+
+                    return false;
+                });
             });
         });
     }
@@ -80,6 +86,46 @@ let userController = (function () {
             toastr.success('Данните бяха записани.');
         }, function (error) {
             toastr.error(error.message || 'Възникнала е грешка при записването на данните!');
+        }).then(function () {
+            button.prop('disabled', false);
+        });
+    }
+
+    function fieldError(selector, message) {
+        $(selector).toggleClass('is-invalid', !!message);
+        $(selector + '-error').text(message || '');
+
+        return !!message;
+    }
+
+    function changePassword() {
+        let current = $('#current-password').val();
+        let next = $('#new-password').val();
+        let repeat = $('#new-password-repeat').val();
+
+        let invalid = fieldError('#current-password', current ? null : 'Въведете текущата парола.');
+        invalid = fieldError('#new-password', next.length < 6 ? 'Паролата трябва да е поне 6 символа.'
+            : next === current ? 'Новата парола съвпада с текущата.' : null) || invalid;
+        invalid = fieldError('#new-password-repeat', repeat !== next ? 'Паролите не съвпадат.' : null) || invalid;
+
+        if (invalid) {
+            $('#password-form .is-invalid').first().trigger('focus');
+
+            return;
+        }
+
+        let button = $('#ux-btn-change-password').prop('disabled', true);
+
+        authService.changePassword(current, next).then(function () {
+            $('#password-form')[0].reset();
+            toastr.success('Паролата беше сменена.');
+        }, function (error) {
+            if (error.status === 400 && /текущата/i.test(error.message)) {
+                fieldError('#current-password', error.message);
+                $('#current-password').trigger('focus');
+            } else {
+                toastr.error(error.message);
+            }
         }).then(function () {
             button.prop('disabled', false);
         });

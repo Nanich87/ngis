@@ -179,6 +179,24 @@ def update_me(req):
     return HTTPStatus.OK, user_to_json(row)
 
 
+@route('POST', '/api/me/password')
+def change_password(req):
+    user = req.require_user()
+    current = req.field('currentPassword')
+    new = req.field('newPassword')
+    if not db.verify_password(current, user['password_hash']):
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Текущата парола е грешна!')
+    if len(new) < 6:
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Новата парола трябва да е поне 6 символа!')
+    if new == current:
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Новата парола съвпада с текущата!')
+    req.conn.execute('UPDATE users SET password_hash = ? WHERE id = ?', (db.hash_password(new), user['id']))
+    # Sign out every other session of this user; keep the current one.
+    req.conn.execute('DELETE FROM sessions WHERE user_id = ? AND token != ?',
+                     (user['id'], req.handler.session_token()))
+    return HTTPStatus.OK, {'ok': True}
+
+
 # --------------------------------------------------------------------------- admin
 
 @route('GET', '/api/admin/users')

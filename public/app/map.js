@@ -4,9 +4,7 @@ let map = (function () {
 
     // ------------------------------------------------------------------ base maps
 
-    const ESRI_ATTRIBUTION = new ol.Attribution({
-        html: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics'
-    });
+    const ESRI_ATTRIBUTION = 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics';
 
     const BASE_MAPS = [
         { id: 'osm', label: 'Карта', title: 'OpenStreetMap' },
@@ -19,7 +17,7 @@ let map = (function () {
             preload: Infinity,
             source: new ol.source.XYZ({
                 url: 'https://server.arcgisonline.com/ArcGIS/rest/services/' + service + '/MapServer/tile/{z}/{y}/{x}',
-                attributions: [ESRI_ATTRIBUTION],
+                attributions: ESRI_ATTRIBUTION,
                 maxZoom: 19
             })
         });
@@ -38,6 +36,30 @@ let map = (function () {
                 'satellite-labels': [imagery, labels]
             }
         };
+    }
+
+    // OpenLayers 7+ exposes the default controls as ol.control.defaults.defaults().
+    function defaultControls() {
+        let factory = typeof ol.control.defaults === 'function' ? ol.control.defaults : ol.control.defaults.defaults;
+
+        return factory({ attributionOptions: { collapsible: true } });
+    }
+
+    // Font Awesome icons instead of the Unicode arrows, which many fonts lack.
+    function fullScreenControl() {
+        function icon(code) {
+            let span = document.createElement('span');
+            span.className = 'fa';
+            span.textContent = code;
+
+            return span;
+        }
+
+        return new ol.control.FullScreen({
+            label: icon('\uf065'),
+            labelActive: icon('\uf066'),
+            tipLabel: 'Цял екран'
+        });
     }
 
     // ------------------------------------------------------------------ styles
@@ -239,9 +261,8 @@ let map = (function () {
         olMap = new ol.Map({
             layers: baseLayers.all.slice(),
             target: options.target || 'map',
-            loadTilesWhileInteracting: true,
-            controls: ol.control.defaults({ attributionOptions: { collapsible: true } }).extend([
-                new ol.control.FullScreen(),
+            controls: defaultControls().extend([
+                fullScreenControl(),
                 new ol.control.ScaleLine()
             ]),
             view: new ol.View({
@@ -260,6 +281,113 @@ let map = (function () {
         baseLayers.all.forEach(layer => layer.setVisible(visible.indexOf(layer) !== -1));
     }
 
+    // ------------------------------------------------------------------ projection detection
+
+    const MAP_PROJECTION = 'EPSG:3857';
+
+    const CRS_ALIASES = {
+        'EPSG:4326': 'EPSG:4326',
+        'CRS84': 'EPSG:4326',
+        'EPSG:3857': 'EPSG:3857',
+        'EPSG:900913': 'EPSG:3857',
+        'EPSG:102100': 'EPSG:3857',
+        'EPSG:102113': 'EPSG:3857'
+    };
+
+    // "urn:ogc:def:crs:EPSG::4326", "EPSG:4326", "urn:ogc:def:crs:OGC:1.3:CRS84" -> canonical code
+    function crsFromName(name) {
+        let match = /(?:EPSG:+|^)(\d+)$/.exec(String(name).trim()) || /(CRS84)$/i.exec(String(name).trim());
+
+        if (!match) {
+            return null;
+        }
+
+        let code = /^\d+$/.test(match[1]) ? 'EPSG:' + match[1] : 'CRS84';
+
+        return CRS_ALIASES[code] || null;
+    }
+
+    // Visits up to `limit` coordinate pairs of any geometry.
+    function sampleCoordinates(geojson, limit) {
+        let samples = [];
+
+        function walk(coords) {
+            if (samples.length >= limit || !Array.isArray(coords)) {
+                return;
+            }
+
+            if (typeof coords[0] === 'number') {
+                samples.push(coords);
+
+                return;
+            }
+
+            for (let i = 0; i < coords.length && samples.length < limit; i++) {
+                walk(coords[i]);
+            }
+        }
+
+        function visitGeometry(geometry) {
+            if (!geometry) {
+                return;
+            }
+
+            if (geometry.type === 'GeometryCollection') {
+                (geometry.geometries || []).forEach(visitGeometry);
+            } else {
+                walk(geometry.coordinates);
+            }
+        }
+
+        if (geojson.type === 'FeatureCollection') {
+            (geojson.features || []).forEach(f => samples.length < limit && visitGeometry(f && f.geometry));
+        } else if (geojson.type === 'Feature') {
+            visitGeometry(geojson.geometry);
+        } else {
+            visitGeometry(geojson);
+        }
+
+        return samples;
+    }
+
+    // Returns the projection the file's coordinates are in: the declared "crs" if it is one we
+    // know, otherwise WGS84 when every sampled coordinate fits in degrees, otherwise Web Mercator.
+    function detectProjection(geojson) {
+        let declared = geojson && geojson.crs && geojson.crs.properties && geojson.crs.properties.name;
+
+        if (declared) {
+            let known = crsFromName(declared);
+
+            if (known) {
+                return known;
+            }
+        }
+
+        let samples = sampleCoordinates(geojson, 2000);
+
+        if (samples.length === 0) {
+            return MAP_PROJECTION;
+        }
+
+        let degrees = samples.every(c => Math.abs(c[0]) <= 180 && Math.abs(c[1]) <= 90);
+
+        return degrees ? 'EPSG:4326' : MAP_PROJECTION;
+    }
+
+    // Name of a declared "crs" we cannot reproject, or null.
+    function unsupportedCrs(geojson) {
+        let declared = geojson && geojson.crs && geojson.crs.properties && geojson.crs.properties.name;
+
+        return declared && !crsFromName(declared) ? String(declared) : null;
+    }
+
+    function readGeoJSON(geojson) {
+        return (new ol.format.GeoJSON()).readFeatures(geojson, {
+            dataProjection: detectProjection(geojson),
+            featureProjection: MAP_PROJECTION
+        });
+    }
+
     // ------------------------------------------------------------------ data layers
 
     function addLayer(id, title, geojson) {
@@ -267,7 +395,7 @@ let map = (function () {
             return dataLayers[id];
         }
 
-        let features = (new ol.format.GeoJSON()).readFeatures(geojson);
+        let features = readGeoJSON(geojson);
 
         let layer = new ol.layer.Vector({
             source: new ol.source.Vector({ features: features }),
@@ -397,7 +525,7 @@ let map = (function () {
         overlay = new ol.Overlay({
             element: container,
             autoPan: true,
-            autoPanAnimation: { duration: 250 },
+            autoPan: { animation: { duration: 250 } },
             offset: [0, -10]
         });
 
@@ -464,15 +592,15 @@ let map = (function () {
 
     // Small standalone map showing one GeoJSON document with the regular styles.
     function createPreview(target, geojson) {
-        let features = (new ol.format.GeoJSON()).readFeatures(geojson);
+        let features = readGeoJSON(geojson);
         let source = new ol.source.Vector({ features: features });
         let layer = new ol.layer.Vector({ source: source, style: styleFunction });
 
         let preview = new ol.Map({
             target: target,
             layers: [new ol.layer.Tile({ source: new ol.source.OSM() }), layer],
-            controls: ol.control.defaults({ attributionOptions: { collapsible: true } }).extend([
-                new ol.control.FullScreen(),
+            controls: defaultControls().extend([
+                fullScreenControl(),
                 new ol.control.ScaleLine()
             ]),
             view: new ol.View({ center: ol.proj.fromLonLat([25.3, 42.7]), zoom: 7 })
@@ -520,6 +648,8 @@ let map = (function () {
         onChange: onChange,
         updateSize: updateSize,
         createPreview: createPreview,
-        typeLabel: feature => (STYLE_DEFS[featureKey(feature)] || {}).label
+        typeLabel: feature => (STYLE_DEFS[featureKey(feature)] || {}).label,
+        detectProjection: detectProjection,
+        unsupportedCrs: unsupportedCrs
     };
 }());

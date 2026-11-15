@@ -23,6 +23,9 @@
 </div>
 
 {{#if stats.valid}}
+<div class="alert alert-warning hidden" id="crs-warning">
+    Файлът е в координатна система <strong class="crs-name"></strong>, която не се поддържа. Поддържат се WGS84 (EPSG:4326) и Web Mercator (EPSG:3857), затова геообектите може да са на грешно място.
+</div>
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
         <div class="card h-100 overflow-hidden">
@@ -35,6 +38,7 @@
                 <h2 class="card-title fs-6 mb-0">Съдържание</h2>
             </div>
             <ul class="list-group list-group-flush" id="file-legend"></ul>
+            <div class="card-footer small text-body-secondary">Координати: <span id="projection-info"></span></div>
         </div>
     </div>
 </div>

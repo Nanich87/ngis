@@ -69,7 +69,12 @@ let authService = (function () {
         return api.patch('/api/me', { displayName: displayName, photoURL: photoURL }).then(setUser);
     }
 
+    function changePassword(currentPassword, newPassword) {
+        return api.post('/api/me/password', { currentPassword: currentPassword, newPassword: newPassword });
+    }
+
     return {
+        changePassword: changePassword,
         getCurrentUser: getCurrentUser,
         requireUser: requireUser,
         onAuthStateChanged: onAuthStateChanged,

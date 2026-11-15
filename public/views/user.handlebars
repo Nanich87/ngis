@@ -48,7 +48,7 @@
         </form>
     </div>
     <div class="col-lg-5">
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-header">
                 <h2 class="card-title fs-6 mb-0">Акаунт</h2>
             </div>
@@ -64,5 +64,33 @@
                 </dl>
             </div>
         </div>
+
+        <form class="card" id="password-form" novalidate>
+            <div class="card-header">
+                <h2 class="card-title fs-6 mb-0">Смяна на парола</h2>
+            </div>
+            <div class="card-body">
+                <input type="text" class="visually-hidden" name="username" value="{{ user.email }}" autocomplete="username" tabindex="-1" aria-hidden="true" />
+                <div class="mb-3">
+                    <label for="current-password" class="form-label">Текуща парола</label>
+                    <input class="form-control" id="current-password" type="password" autocomplete="current-password" required />
+                    <div class="invalid-feedback" id="current-password-error"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="new-password" class="form-label">Нова парола</label>
+                    <input class="form-control" id="new-password" type="password" autocomplete="new-password" minlength="6" required aria-describedby="new-password-help" />
+                    <div class="invalid-feedback" id="new-password-error"></div>
+                    <div class="form-text" id="new-password-help">Поне 6 символа. Ще излезете от всички други устройства.</div>
+                </div>
+                <div>
+                    <label for="new-password-repeat" class="form-label">Повторете новата парола</label>
+                    <input class="form-control" id="new-password-repeat" type="password" autocomplete="new-password" required />
+                    <div class="invalid-feedback" id="new-password-repeat-error"></div>
+                </div>
+            </div>
+            <div class="card-footer text-end">
+                <button type="submit" id="ux-btn-change-password" class="btn btn-primary">Смяна на паролата</button>
+            </div>
+        </form>
     </div>
 </div>
