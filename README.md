@@ -19,6 +19,18 @@ python3 server/app.py --port 8000          # http://127.0.0.1:8000
 
 Set `NGIS_SECURE_COOKIE=1` when serving over HTTPS (behind a reverse proxy).
 
+### Coordinate systems
+
+Uploaded GeoJSON is reprojected to the map (Web Mercator) in the browser with proj4js. Supported:
+
+- WGS84 (EPSG:4326 / CRS84) and Web Mercator (EPSG:3857) – detected automatically
+- BGS2005 / CCS2005 (EPSG:7801), BGS2005 / UTM 34N, 35N, 36N (EPSG:7803–7805)
+- WGS84 / UTM 34N, 35N (EPSG:32634, 32635), ETRS89 / UTM 34N, 35N (EPSG:25834, 25835)
+- ETRS89 (EPSG:4258), ETRS89 / LAEA Europe (EPSG:3035)
+
+Projected systems other than Web Mercator must be declared in the file's `crs` member
+(QGIS/GDAL do this on export). Coordinates are read as easting, northing.
+
 ### Migrating from Firebase
 
 1. Export the Realtime Database: Firebase console → Realtime Database → ⋮ → *Export JSON*.

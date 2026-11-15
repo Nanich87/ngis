@@ -285,26 +285,63 @@ let map = (function () {
 
     const MAP_PROJECTION = 'EPSG:3857';
 
+    // Codes that mean the same projection as one OpenLayers already knows.
     const CRS_ALIASES = {
-        'EPSG:4326': 'EPSG:4326',
         'CRS84': 'EPSG:4326',
-        'EPSG:3857': 'EPSG:3857',
         'EPSG:900913': 'EPSG:3857',
         'EPSG:102100': 'EPSG:3857',
         'EPSG:102113': 'EPSG:3857'
     };
 
-    // "urn:ogc:def:crs:EPSG::4326", "EPSG:4326", "urn:ogc:def:crs:OGC:1.3:CRS84" -> canonical code
-    function crsFromName(name) {
-        let match = /(?:EPSG:+|^)(\d+)$/.exec(String(name).trim()) || /(CRS84)$/i.exec(String(name).trim());
+    // Coordinate systems used for data in Bulgaria, reprojected with proj4js.
+    // Definitions from the EPSG registry (epsg.io / spatialreference.org).
+    const PROJ4_DEFS = {
+        'EPSG:7801': ['BGS2005 / CCS2005', '+proj=lcc +lat_0=42.6678756833333 +lon_0=25.5 +lat_1=42 +lat_2=43.3333333333333 +x_0=500000 +y_0=4725824.3591 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'],
+        'EPSG:7803': ['BGS2005 / UTM 34N', '+proj=utm +zone=34 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'],
+        // The EPSG registry pairs this CRS with the "UTM zone 34N" conversion, contradicting its name
+        // and its area of use (east of 24°E = zone 35). Zone 35 is used here.
+        'EPSG:7804': ['BGS2005 / UTM 35N', '+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'],
+        'EPSG:7805': ['BGS2005 / UTM 36N', '+proj=utm +zone=36 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'],
+        'EPSG:32634': ['WGS84 / UTM 34N', '+proj=utm +zone=34 +datum=WGS84 +units=m +no_defs'],
+        'EPSG:32635': ['WGS84 / UTM 35N', '+proj=utm +zone=35 +datum=WGS84 +units=m +no_defs'],
+        'EPSG:25834': ['ETRS89 / UTM 34N', '+proj=utm +zone=34 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'],
+        'EPSG:25835': ['ETRS89 / UTM 35N', '+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs'],
+        'EPSG:4258': ['ETRS89', '+proj=longlat +ellps=GRS80 +no_defs'],
+        'EPSG:3035': ['ETRS89 / LAEA Europe', '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs']
+    };
 
-        if (!match) {
+    const PROJECTION_NAMES = {
+        'EPSG:4326': 'WGS84',
+        'EPSG:3857': 'Web Mercator'
+    };
+
+    if (window.proj4 && ol.proj.proj4) {
+        Object.keys(PROJ4_DEFS).forEach(function (code) {
+            proj4.defs(code, PROJ4_DEFS[code][1]);
+            PROJECTION_NAMES[code] = PROJ4_DEFS[code][0];
+        });
+
+        ol.proj.proj4.register(proj4);
+    }
+
+    function projectionLabel(code) {
+        return (PROJECTION_NAMES[code] ? PROJECTION_NAMES[code] + ' ' : '') + '(' + code + ')';
+    }
+
+    // "urn:ogc:def:crs:EPSG::7801", "EPSG:7801", "urn:ogc:def:crs:OGC:1.3:CRS84" -> a code
+    // OpenLayers can reproject from, or null.
+    function crsFromName(name) {
+        let text = String(name).trim();
+        let match = /(?:EPSG:+|^)(\d+)$/.exec(text);
+        let code = match ? 'EPSG:' + match[1] : (/CRS84$/i.test(text) ? 'CRS84' : null);
+
+        if (!code) {
             return null;
         }
 
-        let code = /^\d+$/.test(match[1]) ? 'EPSG:' + match[1] : 'CRS84';
+        code = CRS_ALIASES[code] || code;
 
-        return CRS_ALIASES[code] || null;
+        return ol.proj.get(code) ? code : null;
     }
 
     // Visits up to `limit` coordinate pairs of any geometry.
@@ -436,9 +473,14 @@ let map = (function () {
             return false;
         }
 
-        olMap.getView().fit(extent, { padding: [40, 40, 40, 40], maxZoom: 18, duration: 400 });
+        olMap.getView().fit(extent, { padding: [40, 40, 40, 40], maxZoom: maxZoomFor(extent), duration: 400 });
 
         return true;
+    }
+
+    // A single point has an empty extent; don't zoom all the way in on it.
+    function maxZoomFor(extent) {
+        return ol.extent.getWidth(extent) === 0 && ol.extent.getHeight(extent) === 0 ? 15 : 18;
     }
 
     function onChange(listener) {
@@ -608,12 +650,12 @@ let map = (function () {
 
         function fit(extent) {
             if (!ol.extent.isEmpty(extent)) {
-                preview.getView().fit(extent, { size: preview.getSize(), padding: [30, 30, 30, 30], maxZoom: 18, duration: 300 });
+                preview.getView().fit(extent, { size: preview.getSize(), padding: [30, 30, 30, 30], maxZoom: maxZoomFor(extent), duration: 300 });
             }
         }
 
         if (features.length > 0) {
-            preview.getView().fit(source.getExtent(), { size: preview.getSize(), padding: [30, 30, 30, 30], maxZoom: 18 });
+            preview.getView().fit(source.getExtent(), { size: preview.getSize(), padding: [30, 30, 30, 30], maxZoom: maxZoomFor(source.getExtent()) });
         }
 
         return {
@@ -650,6 +692,7 @@ let map = (function () {
         createPreview: createPreview,
         typeLabel: feature => (STYLE_DEFS[featureKey(feature)] || {}).label,
         detectProjection: detectProjection,
+        projectionLabel: projectionLabel,
         unsupportedCrs: unsupportedCrs
     };
 }());

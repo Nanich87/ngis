@@ -420,7 +420,7 @@ let projectController = (function () {
 
                     $('#projection-info').text(crs
                         ? 'Непозната координатна система: ' + crs
-                        : (map.detectProjection(geojson) === 'EPSG:4326' ? 'WGS84 (EPSG:4326)' : 'Web Mercator (EPSG:3857)'));
+                        : map.projectionLabel(map.detectProjection(geojson)));
 
                     if (crs) {
                         $('#crs-warning').removeClass('hidden').find('.crs-name').text(crs);
