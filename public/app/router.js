@@ -8,6 +8,7 @@
 //   router.start('#/');
 //
 // Handlers receive a context { path, params, redirect(hash) }, also bound as `this`.
+// router.currentPath() returns the current path, e.g. '/map/abc'.
 let router = (function () {
 
     let routes = [];
@@ -104,6 +105,7 @@ let router = (function () {
             notFoundHandler = handler;
         },
         redirect: redirect,
+        currentPath: currentPath,
         start: start
     };
 }());

@@ -1,0 +1,21 @@
+# Daily database backup (started by ngis-backup.timer).
+[Unit]
+Description=nGIS database backup
+
+[Service]
+Type=oneshot
+User=h4x0r
+Group=h4x0r
+WorkingDirectory=/home/h4x0r/ngis
+Environment=NGIS_DB=/home/h4x0r/ngis/data/ngis.db
+# Ideally a different disk than the database.
+Environment=NGIS_BACKUP_DIR=/home/h4x0r/ngis-backups
+ExecStart=/usr/bin/python3 /home/h4x0r/ngis/server/manage.py backup --keep 30
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+# SQLite needs write access next to a WAL database even to read it.
+ReadWritePaths=/home/h4x0r/ngis/data /home/h4x0r/ngis-backups
+PrivateNetwork=yes

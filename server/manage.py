@@ -4,6 +4,7 @@
     python3 server/manage.py create-user EMAIL [--admin] [--read] [--write]
     python3 server/manage.py set-password EMAIL
     python3 server/manage.py import-firebase DATABASE_EXPORT.json [--auth USERS_EXPORT.json]
+    python3 server/manage.py backup [--dir DIR] [--keep N]
 
 DATABASE_EXPORT.json is the Realtime Database export
 (Firebase console -> Realtime Database -> ⋮ -> Export JSON).
@@ -13,9 +14,14 @@ set one with `set-password`.
 """
 import argparse
 import getpass
+import gzip
 import json
+import os
+import shutil
 import sqlite3
 import sys
+import tempfile
+from datetime import datetime
 
 import db
 
@@ -27,8 +33,8 @@ def cmd_init(args):
 
 def read_password():
     pw = getpass.getpass('Парола: ')
-    if len(pw) < 6:
-        sys.exit('Паролата трябва да е поне 6 символа.')
+    if len(pw) < 10:
+        sys.exit('Паролата трябва да е поне 10 символа.')
     if pw != getpass.getpass('Повторете паролата: '):
         sys.exit('Паролите не съвпадат.')
     return pw
@@ -108,6 +114,34 @@ def cmd_import_firebase(args):
         print('Задайте пароли с: python3 server/manage.py set-password EMAIL')
 
 
+def cmd_backup(args):
+    """Consistent online copy (works while the server runs, WAL included), verified and gzipped."""
+    os.makedirs(args.dir, exist_ok=True)
+    name = 'ngis-{}.db'.format(datetime.now().strftime('%Y%m%d-%H%M%S'))
+    target = os.path.join(args.dir, name + '.gz')
+
+    source = db.connect()
+    with tempfile.TemporaryDirectory(dir=args.dir) as tmp:
+        copy_path = os.path.join(tmp, name)
+        copy = sqlite3.connect(copy_path)
+        source.backup(copy)
+        result = copy.execute('PRAGMA integrity_check').fetchone()[0]
+        copy.close()
+        source.close()
+        if result != 'ok':
+            sys.exit('Копието не мина проверката за цялост: ' + result)
+        with open(copy_path, 'rb') as src, gzip.open(target + '.part', 'wb') as dst:
+            shutil.copyfileobj(src, dst)
+        os.replace(target + '.part', target)
+    os.chmod(target, 0o600)
+    print('Резервно копие:', target)
+
+    backups = sorted(f for f in os.listdir(args.dir) if f.startswith('ngis-') and f.endswith('.db.gz'))
+    for old in backups[:-args.keep]:
+        os.remove(os.path.join(args.dir, old))
+        print('Изтрито старо копие:', old)
+
+
 def main():
     parser = argparse.ArgumentParser(description='nGIS management')
     sub = parser.add_subparsers(dest='cmd', required=True)
@@ -129,6 +163,12 @@ def main():
     p.add_argument('database')
     p.add_argument('--auth')
     p.set_defaults(fn=cmd_import_firebase)
+
+    p = sub.add_parser('backup')
+    p.add_argument('--dir', default=os.environ.get('NGIS_BACKUP_DIR') or os.path.join(os.path.dirname(os.path.abspath(db.DB_PATH)), 'backups'),
+                   help='папка за копията (по подразбиране $NGIS_BACKUP_DIR или data/backups)')
+    p.add_argument('--keep', type=int, default=14, help='колко последни копия да се пазят (14)')
+    p.set_defaults(fn=cmd_backup)
 
     args = parser.parse_args()
     args.fn(args)

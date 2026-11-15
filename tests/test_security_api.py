@@ -49,6 +49,9 @@ PROTECTED = [
     ('DELETE', '/api/projects/p-alpha/layers/l-alpha'),
     ('GET', '/api/admin/users'),
     ('PATCH', '/api/admin/users/u-reader'),
+    ('POST', '/api/admin/users'),
+    ('POST', '/api/admin/users/u-reader/password'),
+    ('DELETE', '/api/admin/users/u-reader'),
 ]
 
 
@@ -93,14 +96,16 @@ class SqlInjectionTests(ServerTestCase):
                 self.assertIn(r.status, (401, 429))  # 429 once the brute-force limit kicks in
                 self.assertIsNone(c.token)
 
-    def test_signup_fields(self):
-        c = Client(self.port)
-        for payload in SQLI_PAYLOADS:
+    def test_admin_create_user_fields(self):
+        admin = self.client('admin@test.bg')
+        for i, payload in enumerate(SQLI_PAYLOADS):
             with self.subTest(payload=payload):
-                r = c.post('/api/auth/signup', {'email': payload, 'password': 'secret123'})
+                r = admin.post('/api/admin/users', {'email': payload, 'displayName': 'x'})
                 self.assertNotServerError(r)
-                r = c.post('/api/auth/signup', {'email': 'sqli{}@test.bg'.format(abs(hash(payload))), 'password': payload + 'xxxxxx'})
+                r = admin.post('/api/admin/users', {'email': 'sqli{}@test.bg'.format(i), 'displayName': payload[:100]})
                 self.assertNotServerError(r)
+                if r.status == 201:
+                    self.assertEqual(r.json['user']['displayName'], payload[:100].strip())
         self.assertDatabaseIntact()
 
     def test_project_fields(self):
@@ -258,7 +263,7 @@ class AuthenticationTests(ServerTestCase):
         c = Client(self.port)
         r = c.post('/api/auth/login', {'email': '  READER@test.bg ', 'password': PASSWORD})
         self.assertEqual(r.status, 200)
-        r = Client(self.port).post('/api/auth/signup', {'email': 'Reader@Test.bg', 'password': 'secret123'})
+        r = self.client('admin@test.bg').post('/api/admin/users', {'email': 'Reader@Test.bg'})
         self.assertEqual(r.status, 409, 'duplicate account with different case')
 
     def test_password_change(self):
@@ -266,6 +271,8 @@ class AuthenticationTests(ServerTestCase):
         b = self.client('writer@test.bg')
         r = a.post('/api/me/password', {'currentPassword': 'wrong', 'newPassword': 'brand-new-1'})
         self.assertEqual(r.status, 400)
+        r = a.post('/api/me/password', {'currentPassword': PASSWORD, 'newPassword': 'short-123'})
+        self.assertEqual(r.status, 400, 'passwords shorter than 10 characters must be rejected')
         r = a.post('/api/me/password', {'currentPassword': PASSWORD, 'newPassword': 'brand-new-1'})
         self.assertEqual(r.status, 200)
         self.assertEqual(a.get('/api/me').status, 200)
@@ -383,6 +390,108 @@ class AuthorizationTests(ServerTestCase):
         self.assertNotIn('pbkdf2', self.client('reader@test.bg').get('/api/me').text)
 
 
+# --------------------------------------------------------------------------- user management
+
+class UserManagementTests(ServerTestCase):
+
+    def test_public_signup_is_disabled(self):
+        r = Client(self.port).post('/api/auth/signup', {'email': 'new@test.bg', 'password': 'long-enough-1'})
+        self.assertEqual(r.status, 404)
+        conn = self.db()
+        self.assertIsNone(conn.execute("SELECT 1 FROM users WHERE email='new@test.bg'").fetchone())
+        conn.close()
+
+    def test_only_admins_manage_users(self):
+        for email in ['nobody@test.bg', 'reader@test.bg', 'writer@test.bg']:
+            c = self.client(email)
+            with self.subTest(user=email):
+                self.assertEqual(c.post('/api/admin/users', {'email': 'x@test.bg'}).status, 403)
+                self.assertEqual(c.post('/api/admin/users/u-nobody/password').status, 403)
+                self.assertEqual(c.delete('/api/admin/users/u-nobody').status, 403)
+
+    def test_create_user_with_generated_password(self):
+        admin = self.client('admin@test.bg')
+        r = admin.post('/api/admin/users', {'email': ' Created@Test.bg ', 'displayName': 'Нов', 'canRead': True})
+        self.assertEqual(r.status, 201, r.text)
+        password = r.json['password']
+        self.assertGreaterEqual(len(password), 16)
+        user = r.json['user']
+        self.assertEqual((user['email'], user['canRead'], user['canWrite'], user['isAdmin']), ('Created@Test.bg', True, False, False))
+        self.assertEqual(Client(self.port).post('/api/auth/login', {'email': 'created@test.bg', 'password': password}).status, 200)
+        self.assertEqual(admin.post('/api/admin/users', {'email': 'created@test.bg'}).status, 409)
+        self.assertEqual(admin.post('/api/admin/users', {'email': 'x2@test.bg', 'isAdmin': 'true'}).status, 400)
+        # Admin implies read and write.
+        r = admin.post('/api/admin/users', {'email': 'boss@test.bg', 'isAdmin': True})
+        self.assertTrue(r.json['user']['canRead'] and r.json['user']['canWrite'])
+        # Passwords are random per user.
+        self.assertNotEqual(r.json['password'], password)
+
+    def test_reset_password(self):
+        admin = self.client('admin@test.bg')
+        r = admin.post('/api/admin/users', {'email': 'reset@test.bg', 'canRead': True})
+        uid, old = r.json['user']['uid'], r.json['password']
+        session = Client(self.port).login('reset@test.bg', old)
+        r = admin.post('/api/admin/users/{}/password'.format(uid))
+        self.assertEqual(r.status, 200)
+        new = r.json['password']
+        self.assertNotEqual(new, old)
+        self.assertEqual(session.get('/api/me').status, 401, 'the user must be signed out everywhere')
+        self.assertEqual(Client(self.port).post('/api/auth/login', {'email': 'reset@test.bg', 'password': old}).status, 401)
+        self.assertEqual(Client(self.port).post('/api/auth/login', {'email': 'reset@test.bg', 'password': new}).status, 200)
+        # Imported users without a password get one the same way.
+        r = admin.post('/api/admin/users/u-imported/password')
+        self.assertEqual(Client(self.port).post('/api/auth/login', {'email': 'imported@test.bg', 'password': r.json['password']}).status, 200)
+        self.assertEqual(admin.post('/api/admin/users/missing/password').status, 404)
+
+    def test_delete_user(self):
+        admin = self.client('admin@test.bg')
+        r = admin.post('/api/admin/users', {'email': 'gone@test.bg', 'canRead': True})
+        uid, password = r.json['user']['uid'], r.json['password']
+        session = Client(self.port).login('gone@test.bg', password)
+        self.assertEqual(admin.delete('/api/admin/users/' + uid).status, 200)
+        self.assertEqual(session.get('/api/me').status, 401)
+        self.assertEqual(Client(self.port).post('/api/auth/login', {'email': 'gone@test.bg', 'password': password}).status, 401)
+        self.assertEqual(admin.delete('/api/admin/users/' + uid).status, 404)
+        self.assertEqual(admin.delete('/api/admin/users/u-admin').status, 400, 'admins cannot delete themselves')
+        conn = self.db()
+        self.assertIsNone(conn.execute('SELECT 1 FROM sessions WHERE user_id = ?', (uid,)).fetchone())
+        conn.close()
+
+
+# --------------------------------------------------------------------------- reverse proxy
+
+def login_from(port, email, password, forwarded_for):
+    return Client(port).post('/api/auth/login', {'email': email, 'password': password},
+                             headers={'X-Forwarded-For': forwarded_for})
+
+
+class TrustedProxyTests(ServerTestCase):
+    """Behind nginx (NGIS_TRUSTED_PROXIES=127.0.0.1) limits apply to the real client address."""
+    server_env = {'NGIS_TRUSTED_PROXIES': '127.0.0.1'}
+
+    def test_lockout_is_per_real_client(self):
+        statuses = [login_from(self.port, 'admin@test.bg', 'wrong-{}'.format(i), '203.0.113.7').status for i in range(12)]
+        self.assertIn(429, statuses)
+        self.assertEqual(login_from(self.port, 'admin@test.bg', PASSWORD, '203.0.113.7').status, 429)
+        # Another visitor behind the same proxy is not affected.
+        self.assertEqual(login_from(self.port, 'admin@test.bg', PASSWORD, '198.51.100.20').status, 200)
+
+    def test_injected_addresses_are_ignored(self):
+        # nginx overwrites the header, but with "append" setups the client-controlled part is on the left.
+        for i in range(12):
+            login_from(self.port, 'writer@test.bg', 'wrong-{}'.format(i), '1.2.3.{}, 192.0.2.50'.format(i))
+        self.assertEqual(login_from(self.port, 'writer@test.bg', PASSWORD, '9.9.9.9, 192.0.2.50').status, 429)
+
+
+class UntrustedProxyHeaderTests(ServerTestCase):
+    """Without trusted proxies a forged X-Forwarded-For must not bypass the lockout."""
+
+    def test_forged_header_does_not_bypass_lockout(self):
+        for i in range(12):
+            login_from(self.port, 'admin@test.bg', 'wrong-{}'.format(i), '10.0.0.{}'.format(i))
+        self.assertEqual(login_from(self.port, 'admin@test.bg', PASSWORD, '10.0.0.99').status, 429)
+
+
 # --------------------------------------------------------------------------- input validation
 
 class InputValidationTests(ServerTestCase):
@@ -441,9 +550,11 @@ class InputValidationTests(ServerTestCase):
         self.assertEqual(c.patch('/api/me', {'displayName': long, 'photoURL': ''}).status, 400, 'displayName')
         self.assertEqual(c.patch('/api/me', {'displayName': '', 'photoURL': 'https://x.bg/' + long}).status, 400, 'photoURL')
         self.assertEqual(c.post('/api/projects/p-beta/layers', {'title': long, 'content': SAMPLE_GEOJSON}).status, 400, 'title')
-        anon = Client(self.port)
-        self.assertEqual(anon.post('/api/auth/signup', {'email': long + '@x.bg', 'password': 'secret123'}).status, 400, 'email')
-        self.assertEqual(anon.post('/api/auth/signup', {'email': 'long-pw@x.bg', 'password': 'x' * 1000000}).status, 400, 'password')
+        admin = self.client('admin@test.bg')
+        self.assertEqual(admin.post('/api/admin/users', {'email': long + '@x.bg'}).status, 400, 'email')
+        self.assertEqual(admin.post('/api/admin/users', {'email': 'n@x.bg', 'displayName': long}).status, 400, 'new user name')
+        self.assertEqual(c.post('/api/me/password', {'currentPassword': 'x', 'newPassword': 'x' * 1000000}).status, 400, 'password')
+        self.assertEqual(Client(self.port).post('/api/auth/login', {'email': 'a@b.bg', 'password': 'x' * 1000000}).status, 400, 'login password')
 
     def test_photo_url_must_be_http(self):
         c = self.client('writer@test.bg')

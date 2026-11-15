@@ -1,0 +1,37 @@
+# Production unit: the app listens on localhost only; nginx terminates HTTPS in front of it.
+[Unit]
+Description=nGIS web GIS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=h4x0r
+Group=h4x0r
+WorkingDirectory=/home/h4x0r/ngis
+Environment=NGIS_DB=/home/h4x0r/ngis/data/ngis.db
+Environment=PYTHONUNBUFFERED=1
+# Served over HTTPS by nginx: session cookie only over HTTPS.
+Environment=NGIS_SECURE_COOKIE=1
+# Read the real client IP from X-Forwarded-For only when the request comes from nginx.
+Environment=NGIS_TRUSTED_PROXIES=127.0.0.1
+ExecStart=/usr/bin/python3 /home/h4x0r/ngis/server/app.py --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+# Hardening: read-only system and home, except the database folder
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/h4x0r/ngis/data
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictRealtime=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

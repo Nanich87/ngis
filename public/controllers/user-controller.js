@@ -45,7 +45,7 @@ let userController = (function () {
                 renderAvatar($('#profile-avatar'), user);
 
                 $('#ux-btn-copy-uid').on('click', function () {
-                    copyText(user.uid);
+                    pageHelper.copyText(user.uid, 'ID е копиран.');
                 });
 
                 // Returning false keeps the browser from submitting (and reloading) the page.
@@ -104,7 +104,7 @@ let userController = (function () {
         let repeat = $('#new-password-repeat').val();
 
         let invalid = fieldError('#current-password', current ? null : 'Въведете текущата парола.');
-        invalid = fieldError('#new-password', next.length < 6 ? 'Паролата трябва да е поне 6 символа.'
+        invalid = fieldError('#new-password', next.length < 10 ? 'Паролата трябва да е поне 10 символа.'
             : next === current ? 'Новата парола съвпада с текущата.' : null) || invalid;
         invalid = fieldError('#new-password-repeat', repeat !== next ? 'Паролите не съвпадат.' : null) || invalid;
 
@@ -129,35 +129,6 @@ let userController = (function () {
         }).then(function () {
             button.prop('disabled', false);
         });
-    }
-
-    function copyText(text) {
-        let done = () => toastr.success('ID е копиран.');
-
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
-        } else {
-            fallbackCopy(text, done);
-        }
-    }
-
-    // navigator.clipboard needs HTTPS; plain-HTTP LAN access falls back to execCommand.
-    function fallbackCopy(text, done) {
-        let input = $('<textarea class="visually-hidden"></textarea>').val(text).appendTo('body');
-
-        input[0].select();
-
-        try {
-            if (document.execCommand('copy')) {
-                done();
-            } else {
-                throw new Error();
-            }
-        } catch (e) {
-            toastr.info('Копирайте ID ръчно: ' + text);
-        }
-
-        input.remove();
     }
 
     return {

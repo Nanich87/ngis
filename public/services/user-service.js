@@ -12,8 +12,25 @@ let userService = (function () {
         return api.patch('/api/admin/users/' + encodeURIComponent(userID), changes);
     }
 
+    // Returns { user, password }; the generated password is shown once.
+    function createUser(data) {
+        return api.post('/api/admin/users', data);
+    }
+
+    // Returns { password }; signs the user out everywhere.
+    function resetPassword(userID) {
+        return api.post('/api/admin/users/' + encodeURIComponent(userID) + '/password');
+    }
+
+    function deleteUser(userID) {
+        return api.delete('/api/admin/users/' + encodeURIComponent(userID));
+    }
+
     return {
         listUsers: listUsers,
-        updateUser: updateUser
+        updateUser: updateUser,
+        createUser: createUser,
+        resetPassword: resetPassword,
+        deleteUser: deleteUser
     };
 }());

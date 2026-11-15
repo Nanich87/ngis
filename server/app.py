@@ -33,6 +33,7 @@ MAX_PASSWORD = 1024
 MAX_DISPLAY_NAME = 100
 MAX_URL = 2048
 MAX_TITLE = 255
+MIN_PASSWORD = 10              # passwords chosen by users
 
 # Brute-force protection
 LOGIN_MAX_FAILURES = 10            # per email + IP
@@ -44,6 +45,10 @@ def _env_header_value(name, default=''):
     # Environment values end up in a header: no CR/LF.
     return os.environ.get(name, default).replace('\r', '').replace('\n', '').strip()
 
+
+# Reverse proxies (e.g. nginx on 127.0.0.1) whose X-Forwarded-For header is trusted.
+# Comma-separated IP addresses; empty = use the TCP peer address only.
+TRUSTED_PROXIES = {ip.strip() for ip in os.environ.get('NGIS_TRUSTED_PROXIES', '').split(',') if ip.strip()}
 
 # Who may embed the site in a frame (CSP source list). Default: nobody (clickjacking protection).
 FRAME_ANCESTORS = _env_header_value('NGIS_FRAME_ANCESTORS', "'none'").replace(';', '')
@@ -240,7 +245,7 @@ class Request:
 
     @property
     def client_ip(self):
-        return self.handler.client_address[0]
+        return self.handler.client_ip()
 
 
 # --------------------------------------------------------------------------- auth
@@ -251,22 +256,6 @@ def start_session(req, user_id):
     req.conn.execute('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
                      (token, user_id, (now_utc() + SESSION_TTL).isoformat()))
     req.new_cookie = (token, int(SESSION_TTL.total_seconds()))
-
-
-@route('POST', '/api/auth/signup')
-def signup(req):
-    email = req.field('email', max_length=MAX_EMAIL).strip()
-    password = req.field('password', max_length=MAX_PASSWORD)
-    if not EMAIL_RE.fullmatch(email):
-        raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалиден Email адрес!')
-    if len(password) < 6:
-        raise ApiError(HTTPStatus.BAD_REQUEST, 'Паролата трябва да е поне 6 символа!')
-    try:
-        req.conn.execute('INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)',
-                         (db.new_id(), email, db.hash_password(password)))
-    except sqlite3.IntegrityError:
-        raise ApiError(HTTPStatus.CONFLICT, 'Вече съществува потребител с този Email адрес!')
-    return HTTPStatus.CREATED, {'ok': True}
 
 
 @route('POST', '/api/auth/login')
@@ -326,8 +315,8 @@ def change_password(req):
         password_limiter.fail(user['id'])
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Текущата парола е грешна!')
     password_limiter.reset(user['id'])
-    if len(new) < 6:
-        raise ApiError(HTTPStatus.BAD_REQUEST, 'Новата парола трябва да е поне 6 символа!')
+    if len(new) < MIN_PASSWORD:
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Новата парола трябва да е поне {} символа!'.format(MIN_PASSWORD))
     if new == current:
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Новата парола съвпада с текущата!')
     req.conn.execute('UPDATE users SET password_hash = ? WHERE id = ?', (db.hash_password(new), user['id']))
@@ -350,6 +339,69 @@ def list_users(req):
         user['hasPassword'] = row['password_hash'] is not None
         result.append(user)
     return HTTPStatus.OK, result
+
+
+def generate_password():
+    # 16 URL-safe characters (~96 bits); shown once to the admin, who passes it on.
+    return secrets.token_urlsafe(12)
+
+
+def get_user_or_404(req, uid):
+    row = req.conn.execute('SELECT * FROM users WHERE id = ?', (uid,)).fetchone()
+    if row is None:
+        raise ApiError(HTTPStatus.NOT_FOUND, 'Няма такъв потребител!')
+    return row
+
+
+def bool_field(req, name):
+    value = req.body.get(name, False)
+    if not isinstance(value, bool):
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Правата трябва да са true или false!')
+    return value
+
+
+@route('POST', '/api/admin/users')
+def create_user(req):
+    """Accounts are created by admins only (there is no public sign-up)."""
+    req.require_admin()
+    email = req.field('email', max_length=MAX_EMAIL).strip()
+    display_name = (req.field('displayName', required=False, max_length=MAX_DISPLAY_NAME) or '').strip()
+    if not EMAIL_RE.fullmatch(email):
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалиден Email адрес!')
+    can_read, can_write, is_admin = bool_field(req, 'canRead'), bool_field(req, 'canWrite'), bool_field(req, 'isAdmin')
+    password = generate_password()
+    uid = db.new_id()
+    try:
+        req.conn.execute('INSERT INTO users (id, email, password_hash, display_name, is_admin, can_read, can_write) '
+                         'VALUES (?, ?, ?, ?, ?, ?, ?)',
+                         (uid, email, db.hash_password(password), display_name or None,
+                          int(is_admin), int(can_read or is_admin), int(can_write or is_admin)))
+    except sqlite3.IntegrityError:
+        raise ApiError(HTTPStatus.CONFLICT, 'Вече съществува потребител с този Email адрес!')
+    user = user_to_json(get_user_or_404(req, uid))
+    return HTTPStatus.CREATED, {'user': user, 'password': password}
+
+
+@route('POST', '/api/admin/users/:uid/password')
+def reset_user_password(req):
+    """Sets a new random password (forgotten passwords, imported users) and signs the user out."""
+    req.require_admin()
+    row = get_user_or_404(req, req.params['uid'])
+    password = generate_password()
+    req.conn.execute('UPDATE users SET password_hash = ? WHERE id = ?', (db.hash_password(password), row['id']))
+    req.conn.execute('DELETE FROM sessions WHERE user_id = ?', (row['id'],))
+    password_limiter.reset(row['id'])
+    return HTTPStatus.OK, {'password': password}
+
+
+@route('DELETE', '/api/admin/users/:uid')
+def delete_user(req):
+    admin = req.require_admin()
+    row = get_user_or_404(req, req.params['uid'])
+    if row['id'] == admin['id']:
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Не можете да изтриете собствения си акаунт!')
+    req.conn.execute('DELETE FROM users WHERE id = ?', (row['id'],))  # sessions cascade
+    return HTTPStatus.OK, {'ok': True}
 
 
 @route('PATCH', '/api/admin/users/:uid')
@@ -515,6 +567,22 @@ class Handler(SimpleHTTPRequestHandler):
         if morsel is None or not SESSION_TOKEN_RE.fullmatch(morsel.value):
             return None
         return morsel.value
+
+    def client_ip(self):
+        """The real client address: behind a trusted proxy, the last untrusted hop in X-Forwarded-For."""
+        peer = self.client_address[0]
+        if peer not in TRUSTED_PROXIES:
+            return peer
+        headers = getattr(self, 'headers', None)  # missing when the request line itself was malformed
+        hops = [h.strip() for h in ((headers and headers.get('X-Forwarded-For')) or '').split(',') if h.strip()]
+        for hop in reversed(hops):
+            if hop not in TRUSTED_PROXIES:
+                return hop[:64]
+        return peer
+
+    def address_string(self):
+        # Used in the access log.
+        return self.client_ip()
 
     def list_directory(self, path):
         # No directory listings.

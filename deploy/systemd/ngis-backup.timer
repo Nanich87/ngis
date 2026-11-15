@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily nGIS database backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=15m
+# Run at the next boot if the machine was off at 03:30.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

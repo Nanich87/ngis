@@ -55,10 +55,6 @@ let authService = (function () {
         return api.post('/api/auth/login', { email: email, password: password }).then(setUser);
     }
 
-    function signUp(email, password) {
-        return api.post('/api/auth/signup', { email: email, password: password });
-    }
-
     function signOut() {
         return api.post('/api/auth/logout').then(function () {
             setUser(null);
@@ -79,7 +75,6 @@ let authService = (function () {
         requireUser: requireUser,
         onAuthStateChanged: onAuthStateChanged,
         signIn: signIn,
-        signUp: signUp,
         signOut: signOut,
         updateProfile: updateProfile
     };

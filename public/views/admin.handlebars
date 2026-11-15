@@ -5,6 +5,7 @@
     </div>
     <div class="page-actions">
         <input id="user-search" type="search" class="form-control" placeholder="Търсене по email, име или ID…" aria-label="Търсене на потребител" />
+        <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#create-user-modal"><span class="fa">&#xf234;</span> Нов потребител</button>
     </div>
 </div>
 
@@ -17,14 +18,78 @@
             <thead>
                 <tr>
                     <th>Потребител</th>
-                    <th class="text-nowrap">Регистриран</th>
+                    <th class="text-nowrap">Създаден</th>
                     <th class="text-center">Четене</th>
                     <th class="text-center">Запис</th>
                     <th class="text-center">Админ</th>
+                    <th class="text-end"><span class="visually-hidden">Действия</span></th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
 </div>
-<p class="small text-body-secondary mt-3 mb-0">Промените се записват веднага. „Админ“ дава пълен достъп, включително създаване и изтриване на обекти и управление на правата.</p>
+<p class="small text-body-secondary mt-3 mb-0">Промените в правата се записват веднага. „Админ“ дава пълен достъп, включително създаване и изтриване на обекти и управление на потребителите.</p>
+
+<div class="modal fade" id="create-user-modal" tabindex="-1" aria-labelledby="create-user-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="create-user-form" novalidate>
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="create-user-title">Нов потребител</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Затваряне"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="new-user-email" class="form-label">Email</label>
+                    <input class="form-control" id="new-user-email" type="email" maxlength="254" autocomplete="off" required />
+                    <div class="invalid-feedback" id="new-user-email-error"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="new-user-name" class="form-label">Име <span class="text-body-secondary">(по избор)</span></label>
+                    <input class="form-control" id="new-user-name" type="text" maxlength="100" autocomplete="off" />
+                </div>
+                <fieldset>
+                    <legend class="form-label fs-6 mb-2">Права</legend>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="new-user-read" checked />
+                        <label class="form-check-label" for="new-user-read">Четене</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="new-user-write" />
+                        <label class="form-check-label" for="new-user-write">Запис</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="new-user-admin" />
+                        <label class="form-check-label" for="new-user-admin">Админ</label>
+                    </div>
+                </fieldset>
+                <p class="form-text mb-0 mt-3">Ще бъде генерирана временна парола, която да предадете на потребителя. Той може да я смени от профила си.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отказ</button>
+                <button type="submit" class="btn btn-primary" id="ux-btn-create-user">Създаване</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="password-modal" tabindex="-1" aria-labelledby="password-modal-title" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="password-modal-title">Временна парола</h2>
+            </div>
+            <div class="modal-body">
+                <p>Паролата за <strong id="password-modal-email"></strong> е:</p>
+                <div class="d-flex gap-2 align-items-center mb-3">
+                    <input class="form-control font-monospace" id="password-modal-value" type="text" readonly aria-label="Временна парола" />
+                    <button type="button" class="btn btn-neutral text-nowrap" id="ux-btn-copy-password"><span class="fa">&#xf0c5;</span> Копиране</button>
+                </div>
+                <div class="alert alert-warning small mb-0">Паролата се показва само сега. Предайте я на потребителя по сигурен канал и го помолете да я смени от профила си.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Готово</button>
+            </div>
+        </div>
+    </div>
+</div>

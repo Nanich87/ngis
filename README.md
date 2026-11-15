@@ -24,17 +24,19 @@ nGIS е малка уеб ГИС система за управление на �
   система, файлът може да се изтегли, а GeoJSON кодът може да се види.
 - **Координатни системи:** файловете се преобразуват към проекцията на картата в браузъра (вижте
   [Координатни системи](#координатни-системи)).
-- **Потребители:** регистрация и вход, профил с име, URL на снимка и смяна на парола, и
-  администраторска страница с превключватели за четене, запис и админ за всеки потребител.
+- **Потребители:** няма свободна регистрация. Акаунтите се създават от администратор в страницата
+  „Потребители“: системата генерира временна парола, която се показва веднъж. Оттам се генерира и
+  нова парола при забравена, изтрива се акаунт и се дават права за четене, запис и админ. Всеки
+  потребител има профил с име, URL на снимка и смяна на парола.
 
 ### Роли
 
 | Роля | Може |
 |---|---|
-| Нов потребител | Да влезе и да види профила си. Новият потребител няма достъп, докато администратор не му даде права. |
+| Без права | Да влезе и да види профила си. Администраторът избира правата при създаване на акаунта и може да ги сменя по всяко време. |
 | Четене | Да разглежда обекти, файлове и картата |
 | Запис | Всичко от „Четене“, плюс качване и изтриване на файлове |
-| Админ | Всичко, плюс създаване и изтриване на обекти и управление на правата на потребителите |
+| Админ | Всичко, плюс създаване и изтриване на обекти и управление на потребителите |
 
 ## Технологии
 
@@ -100,7 +102,11 @@ server/
   app.py                 HTTP сървър и JSON API
   db.py                  Връзка със SQLite, хеширане на пароли
   schema.sql             Схема на базата данни
-  manage.py              Администриране от командния ред и импорт от Firebase
+  manage.py              Администриране от командния ред, резервни копия, импорт от Firebase
+deploy/
+  nginx/                 Конфигурация за nginx (HTTPS reverse proxy)
+  systemd/               Услуга за сървъра и таймер за резервните копия
+tests/                   Тестове за сигурност (API и браузър)
 data/ngis.db             База данни (създава се при първо пускане, не е в git)
 ```
 
@@ -118,6 +124,8 @@ python3 server/app.py --port 8000          # http://127.0.0.1:8000
 |---|---|
 | `NGIS_DB` | Път до базата данни SQLite (по подразбиране `data/ngis.db`) |
 | `NGIS_SECURE_COOKIE=1` | Сесийната бисквитка се маркира като `Secure`. Задайте я, когато сайтът се сервира през HTTPS зад reverse proxy. |
+| `NGIS_TRUSTED_PROXIES` | IP адреси на reverse proxy-та (със запетая), от които се вярва на `X-Forwarded-For`, например `127.0.0.1`. Без тях се ползва адресът на самата връзка. |
+| `NGIS_BACKUP_DIR` | Папка за резервните копия (по подразбиране `data/backups`). |
 | `NGIS_FRAME_ANCESTORS` | Кои сайтове могат да вграждат nGIS в рамка (CSP `frame-ancestors`). По подразбиране `'none'`, тоест никой. |
 | `NGIS_CSP_REPORT_URI` | Адрес, на който браузърите да докладват нарушения на Content-Security-Policy (по избор). |
 | `NGIS_CSP` | Заменя изцяло Content-Security-Policy. Ползва се само за тестове или специални случаи. |
@@ -129,7 +137,71 @@ python3 server/manage.py init                                  # създава 
 python3 server/manage.py create-user EMAIL [--admin] [--read] [--write]
 python3 server/manage.py set-password EMAIL
 python3 server/manage.py import-firebase EXPORT.json [--auth USERS.json]
+python3 server/manage.py backup [--dir DIR] [--keep 14]          # резервно копие
 ```
+
+Паролите, които потребителите избират, трябва да са поне 10 символа. Първият администратор се
+създава с `create-user --admin`, а следващите потребители се създават от страницата „Потребители“.
+
+## Резервни копия
+
+`manage.py backup` прави консистентно копие на базата и докато сървърът работи (с вградения backup
+API на SQLite), проверява го с `PRAGMA integrity_check`, компресира го (`ngis-ДАТА-ЧАС.db.gz`) и
+пази последните N копия.
+
+Възстановяване:
+
+```bash
+sudo systemctl stop ngis
+gunzip -c /home/h4x0r/ngis-backups/ngis-20261115-033000.db.gz > data/ngis.db
+rm -f data/ngis.db-wal data/ngis.db-shm
+sudo systemctl start ngis
+```
+
+Ежедневно копие в 03:30 с systemd таймер:
+
+```bash
+sudo cp deploy/systemd/ngis-backup.service deploy/systemd/ngis-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ngis-backup.timer
+systemctl list-timers ngis-backup.timer        # кога е следващото
+```
+
+Копията трябва да са на друг диск (или да се синхронизират другаде). Сменете `NGIS_BACKUP_DIR` в
+`ngis-backup.service`, ако е нужно.
+
+## Внедряване в интернет
+
+Сървърът слуша само на `127.0.0.1`, а nginx отпред поема HTTPS. Примерът е за домейн
+`gis.example.com`, заменете го с вашия.
+
+1. **DNS и рутер:** A запис за домейна към публичния ви IP, а в рутера пренасочване на портове 80 и
+   443 към тази машина.
+2. **nginx и certbot:**
+   ```bash
+   sudo apt install nginx certbot python3-certbot-nginx
+   sudo cp deploy/nginx/ngis-proxy.conf /etc/nginx/ngis-proxy.conf
+   sudo cp deploy/nginx/ngis.conf /etc/nginx/sites-available/ngis
+   sudo sed -i 's/gis.example.com/ВАШИЯТ.ДОМЕЙН/' /etc/nginx/sites-available/ngis
+   sudo ln -s /etc/nginx/sites-available/ngis /etc/nginx/sites-enabled/ngis
+   sudo nginx -t && sudo systemctl reload nginx
+   sudo certbot --nginx -d ВАШИЯТ.ДОМЕЙН --redirect --hsts
+   ```
+   certbot взема сертификат от Let's Encrypt, добавя HTTPS, пренасочването от HTTP и HSTS, и сам
+   подновява сертификата.
+3. **Услугата:** `deploy/systemd/ngis.service` е вариантът за продукция. Слуша на `127.0.0.1`, с
+   `NGIS_SECURE_COOKIE=1` и `NGIS_TRUSTED_PROXIES=127.0.0.1`.
+   ```bash
+   sudo cp deploy/systemd/ngis.service /etc/systemd/system/ngis.service
+   sudo systemctl daemon-reload && sudo systemctl restart ngis
+   ```
+4. **Защитна стена:** отворени трябва да са само 80 и 443 (например
+   `sudo ufw allow 'Nginx Full'`). Порт 8000 не трябва да е достъпен отвън.
+
+nginx презаписва `X-Forwarded-For` с адреса на клиента, а приложението вярва на тази заглавка само
+от `NGIS_TRUSTED_PROXIES`. Така ограничението на опитите за вход работи по истинския IP и не може да
+се заобиколи с подправена заглавка. nginx добавя и свое ограничение: 10 опита за вход в минута от
+IP.
 
 ## API
 
@@ -138,7 +210,7 @@ python3 server/manage.py import-firebase EXPORT.json [--auth USERS.json]
 
 | Метод | Път | Достъп |
 |---|---|---|
-| `POST` | `/api/auth/signup`, `/api/auth/login`, `/api/auth/logout` | всеки |
+| `POST` | `/api/auth/login`, `/api/auth/logout` | всеки |
 | `GET`, `PATCH` | `/api/me` | влязъл потребител |
 | `POST` | `/api/me/password` | влязъл потребител |
 | `GET` | `/api/projects`, `/api/projects/:id` | четене |
@@ -147,8 +219,9 @@ python3 server/manage.py import-firebase EXPORT.json [--auth USERS.json]
 | `GET` | `/api/projects/:id/layers`, `/api/projects/:id/layers/:layerId` | четене |
 | `POST` | `/api/projects/:id/layers` | запис |
 | `DELETE` | `/api/projects/:id/layers/:layerId` | запис |
-| `GET` | `/api/admin/users` | админ |
-| `PATCH` | `/api/admin/users/:uid` | админ |
+| `GET`, `POST` | `/api/admin/users` (списък, нов потребител с генерирана парола) | админ |
+| `PATCH`, `DELETE` | `/api/admin/users/:uid` (права, изтриване) | админ |
+| `POST` | `/api/admin/users/:uid/password` (нова генерирана парола) | админ |
 
 ## Координатни системи
 
@@ -177,6 +250,7 @@ python3 -m unittest discover -s tests -v
 - **`tests/test_security_api.py`** проверява:
   - SQL инжекции във всички полета, адреси и сесийната бисквитка;
   - удостоверяване и сесии, права по роли и достъп до чужди данни (IDOR);
+  - управление на потребители (само от админ) и работа зад reverse proxy;
   - CSRF, валидация на входа и злоупотреби с HTTP заглавки;
   - path traversal и защитните HTTP заглавки.
 - **`tests/test_security_browser.py`** работи в headless Firefox и се пропуска, ако Firefox не е
@@ -187,22 +261,26 @@ python3 -m unittest discover -s tests -v
 Основни защити:
 
 - **SQL:** всички заявки към базата са параметризирани.
+- **Акаунти:** няма свободна регистрация. Акаунтите се създават от администратор, с генерирана
+  парола (около 96 бита случайност). Паролите, избрани от потребителите, са поне 10 символа.
 - **Вход:** 10 грешни опита за email + IP (или 50 от един IP) заключват входа за 15 минути (HTTP
-  429). Същото важи за грешна текуща парола при смяна. Броячите са в паметта на процеса, така че
-  зад reverse proxy всички заявки идват от един IP.
+  429). Същото важи за грешна текуща парола при смяна. Броячите са в паметта на процеса. Зад
+  reverse proxy се ползва истинският IP от `X-Forwarded-For` (вижте `NGIS_TRUSTED_PROXIES`).
 - **Изброяване на акаунти:** входът отнема еднакво време при несъществуващ email и при грешна
   парола.
 - **Валидация:** всички полета имат проверка на типа и дължината. URL-ите на снимки трябва да са
   `http(s)`, а файловете трябва да са GeoJSON.
 - **CSRF:** API приема само `application/json`, а бисквитката е `HttpOnly` и `SameSite=Lax`.
 - **Content-Security-Policy:** скриптове, стилове и шрифтове се зареждат само от самия сайт
-  (`'self'`), без `'unsafe-inline'`, така че вмъкнат HTML не може да изпълни код. `'unsafe-eval'` е разрешен, защото
-  Handlebars компилира шаблоните в браузъра. Заявките (`connect-src`) са само към сайта,
+  (`'self'`), без `'unsafe-inline'`, така че вмъкнат HTML не може да изпълни код. `'unsafe-eval'` е
+  разрешен, защото Handlebars компилира шаблоните в браузъра. Заявките (`connect-src`) са само към сайта,
   `object-src` е `'none'`, а вграждането в рамка е забранено.
 - **HTTP заглавки:** `X-Content-Type-Options`, `X-Frame-Options` и `Referrer-Policy`. Листингът на
   директории е изключен и заглавката `Server` не издава версии.
 - **Връзки:** при 30 секунди без активност връзката се затваря, а невалиден `Content-Length` се
   отказва.
+- **Страници:** защитените страници се показват само след като е потвърдено, че потребителят е
+  влязъл.
 
 ## Миграция от Firebase
 

@@ -1,8 +1,8 @@
 <div class="auth-wrapper">
     <div class="card auth-card">
         <div class="card-body p-4">
-            <h1 class="h3 mb-1" id="auth-title">Вход</h1>
-            <p class="text-body-secondary mb-4" id="auth-subtitle">Влезте в nGIS с вашия email и парола.</p>
+            <h1 class="h3 mb-1">Вход</h1>
+            <p class="text-body-secondary mb-4">Влезте в nGIS с вашия email и парола.</p>
 
             <form id="ux-form-auth" novalidate>
                 <div class="mb-3">
@@ -12,18 +12,12 @@
                 <div class="mb-3">
                     <label for="password" class="form-label">Парола</label>
                     <input class="form-control" id="password" type="password" autocomplete="current-password" required />
-                    <div class="form-text hidden" id="password-help">Поне 6 символа.</div>
-                </div>
-                <div class="mb-3 hidden" id="password-repeat-group">
-                    <label for="password-repeat" class="form-label">Повторете паролата</label>
-                    <input class="form-control" id="password-repeat" type="password" autocomplete="new-password" />
                 </div>
                 <button type="submit" class="btn btn-primary w-100" id="ux-btn-submit">Вход</button>
             </form>
 
-            <p class="text-center small mt-4 mb-0">
-                <span id="auth-switch-text">Нямате акаунт?</span>
-                <button type="button" class="btn btn-link btn-sm p-0 align-baseline" id="ux-btn-switch-mode">Регистрация</button>
+            <p class="text-center text-body-secondary small mt-4 mb-0">
+                Нямате акаунт или сте забравили паролата си? Обърнете се към администратора.
             </p>
         </div>
     </div>

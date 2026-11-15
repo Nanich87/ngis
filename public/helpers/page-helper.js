@@ -95,6 +95,39 @@ let pageHelper = (function () {
         return date.isValid() ? date.local().format('DD.MM.YYYY') : value;
     }
 
+    // Copies text to the clipboard. navigator.clipboard needs HTTPS (or localhost), so plain-HTTP
+    // LAN access falls back to execCommand; if that fails too, the text is shown to copy by hand.
+    function copyText(text, successMessage) {
+        let done = () => toastr.success(successMessage || 'Копирано.');
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+        } else {
+            fallbackCopy(text, done);
+        }
+    }
+
+    function fallbackCopy(text, done) {
+        // Inside an open Bootstrap modal the focus trap would steal focus from an element in <body>.
+        let host = $(document.activeElement).closest('.modal')[0] || document.body;
+        let input = $('<textarea class="visually-hidden"></textarea>').val(text).appendTo(host);
+
+        input[0].focus();
+        input[0].select();
+
+        try {
+            if (document.execCommand('copy')) {
+                done();
+            } else {
+                throw new Error();
+            }
+        } catch (e) {
+            toastr.info('Копирайте ръчно: ' + text);
+        }
+
+        input.remove();
+    }
+
     function slug(name) {
         return String(name).toLowerCase();
     }
@@ -105,6 +138,7 @@ let pageHelper = (function () {
         formatBytes: formatBytes,
         formatCount: formatCount,
         formatDate: formatDate,
+        copyText: copyText,
         slug: slug
     };
 }());
