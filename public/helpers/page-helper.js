@@ -10,7 +10,101 @@ let pageHelper = (function () {
         $('body').toggleClass('page-map', page === 'map');
     }
 
+    // Bootstrap modal asking for confirmation. Resolves true/false.
+    function confirm(options) {
+        return new Promise(function (resolve) {
+            let modal = $(
+                '<div class="modal fade" tabindex="-1" aria-hidden="true">' +
+                '  <div class="modal-dialog modal-dialog-centered">' +
+                '    <div class="modal-content">' +
+                '      <div class="modal-header">' +
+                '        <h2 class="modal-title fs-5"></h2>' +
+                '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Затваряне"></button>' +
+                '      </div>' +
+                '      <div class="modal-body"></div>' +
+                '      <div class="modal-footer">' +
+                '        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отказ</button>' +
+                '        <button type="button" class="btn ux-confirm"></button>' +
+                '      </div>' +
+                '    </div>' +
+                '  </div>' +
+                '</div>');
+
+            let confirmed = false;
+
+            modal.find('.modal-title').text(options.title);
+            modal.find('.modal-body').text(options.body);
+            modal.find('.ux-confirm')
+                .addClass(options.danger ? 'btn-danger' : 'btn-primary')
+                .text(options.confirmText || 'Потвърждение')
+                .on('click', function () {
+                    confirmed = true;
+                    instance.hide();
+                });
+
+            modal.on('hidden.bs.modal', function () {
+                instance.dispose();
+                modal.remove();
+                resolve(confirmed);
+            });
+
+            $('body').append(modal);
+
+            let instance = new bootstrap.Modal(modal[0]);
+            instance.show();
+        });
+    }
+
+    function formatBytes(bytes) {
+        if (bytes === null || bytes === undefined) {
+            return '';
+        }
+
+        if (bytes < 1024) {
+            return bytes + ' B';
+        }
+
+        let units = ['KB', 'MB', 'GB'];
+        let value = bytes;
+        let unit = -1;
+
+        do {
+            value /= 1024;
+            unit++;
+        } while (value >= 1024 && unit < units.length - 1);
+
+        return value.toLocaleString('bg-BG', { maximumFractionDigits: value < 10 ? 1 : 0 }) + ' ' + units[unit];
+    }
+
+    function formatCount(count, one, many) {
+        if (count === null || count === undefined) {
+            return '';
+        }
+
+        return count.toLocaleString('bg-BG') + ' ' + (count === 1 ? one : many);
+    }
+
+    // SQLite "YYYY-MM-DD HH:MM:SS" (UTC) -> local date.
+    function formatDate(value) {
+        if (!value) {
+            return '';
+        }
+
+        let date = moment.utc(value, 'YYYY-MM-DD HH:mm:ss');
+
+        return date.isValid() ? date.local().format('DD.MM.YYYY') : value;
+    }
+
+    function slug(name) {
+        return String(name).toLowerCase();
+    }
+
     return {
-        setActivePage: setActivePage
+        setActivePage: setActivePage,
+        confirm: confirm,
+        formatBytes: formatBytes,
+        formatCount: formatCount,
+        formatDate: formatDate,
+        slug: slug
     };
 }());

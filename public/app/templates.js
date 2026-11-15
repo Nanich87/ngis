@@ -3,6 +3,11 @@ var templates = function () {
         Handlebars = window.handlebars || window.Handlebars,
         cache = {};
 
+    handlebars.registerHelper('bytes', value => pageHelper.formatBytes(value));
+    handlebars.registerHelper('count', (value, one, many) => pageHelper.formatCount(value, one, many));
+    handlebars.registerHelper('date', value => pageHelper.formatDate(value));
+    handlebars.registerHelper('slug', value => pageHelper.slug(value));
+
     function get(name) {
         var promise = new Promise(function (resolve, reject) {
             if (cache[name]) {

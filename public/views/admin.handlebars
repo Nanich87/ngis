@@ -1,34 +1,30 @@
-<div class="row">
-    <h2>Контролен панел</h2>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Потребители</h1>
+        <p class="page-subtitle" id="users-summary">&nbsp;</p>
+    </div>
+    <div class="page-actions">
+        <input id="user-search" type="search" class="form-control" placeholder="Търсене по email, име или ID…" aria-label="Търсене на потребител" />
+    </div>
 </div>
-<div class="row">
-    <nav aria-label="breadcrumb"><ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/#/">Начало</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Контролен панел</li>
-    </ol></nav>
+
+<div class="card">
+    <div class="loading-indicator text-center text-body-secondary py-5">
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Зареждане…
+    </div>
+    <div class="table-responsive">
+        <table id="users" class="table table-hover align-middle mb-0 hidden">
+            <thead>
+                <tr>
+                    <th>Потребител</th>
+                    <th class="text-nowrap">Регистриран</th>
+                    <th class="text-center">Четене</th>
+                    <th class="text-center">Запис</th>
+                    <th class="text-center">Админ</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 </div>
-<div class="card card-body">
-    <form id="user-rights" class="form-horizontal">
-        <fieldset>
-            <legend><span class="fa">&#xf044;</span> Редактиране правата на потребител</legend>
-            <div class="row mb-3">
-                <label for="id" class="col-md-2 col-form-label">UID</label>
-                <div class="col-md-10">
-                    <input class="form-control" id="user-id" placeholder="" type="text" />
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-2 col-form-label">Права</div>
-                <div class="col-md-10">
-                    <div class="form-check"><input class="form-check-input" name="rights" id="rights-read" value="read" checked="" type="radio" /><label class="form-check-label" for="rights-read">Четене</label></div>
-                    <div class="form-check"><input class="form-check-input" name="rights" id="rights-write" value="write" type="radio" /><label class="form-check-label" for="rights-write">Запис</label></div>
-                    <div class="form-check"><input class="form-check-input" name="rights" id="rights-both" value="both" type="radio" /><label class="form-check-label" for="rights-both">Четене и запис</label></div>
-                </div>
-            </div>
-        </fieldset>
-    </form>
-    <p class="text-end">
-        <button type="button" id="ux-btn-add-rights" class="btn btn-success"><span class="fa">&#xf067;</span> Добавяне</button>
-        <button type="button" id="ux-btn-remove-rights" class="btn btn-danger"><span class="fa">&#xf00d;</span> Премахване</button>
-    </p>
-</div>
+<p class="small text-body-secondary mt-3 mb-0">Промените се записват веднага. „Админ“ дава пълен достъп, включително създаване и изтриване на обекти и управление на правата.</p>

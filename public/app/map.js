@@ -325,11 +325,13 @@ let map = (function () {
 
     // Entries for the feature types present in the visible data layers.
     function getLegend() {
+        return legendFor(Object.keys(dataLayers).map(id => dataLayers[id]));
+    }
+
+    function legendFor(layers) {
         let counts = {};
 
-        Object.keys(dataLayers).forEach(function (id) {
-            let layer = dataLayers[id];
-
+        layers.forEach(function (layer) {
             if (!layer.getVisible()) {
                 return;
             }
@@ -458,6 +460,48 @@ let map = (function () {
             (rows ? '<table class="ol-popup-props">' + rows + '</table>' : '');
     }
 
+    // ------------------------------------------------------------------ single-file preview
+
+    // Small standalone map showing one GeoJSON document with the regular styles.
+    function createPreview(target, geojson) {
+        let features = (new ol.format.GeoJSON()).readFeatures(geojson);
+        let source = new ol.source.Vector({ features: features });
+        let layer = new ol.layer.Vector({ source: source, style: styleFunction });
+
+        let preview = new ol.Map({
+            target: target,
+            layers: [new ol.layer.Tile({ source: new ol.source.OSM() }), layer],
+            controls: ol.control.defaults({ attributionOptions: { collapsible: true } }).extend([
+                new ol.control.FullScreen(),
+                new ol.control.ScaleLine()
+            ]),
+            view: new ol.View({ center: ol.proj.fromLonLat([25.3, 42.7]), zoom: 7 })
+        });
+
+        function fit(extent) {
+            if (!ol.extent.isEmpty(extent)) {
+                preview.getView().fit(extent, { size: preview.getSize(), padding: [30, 30, 30, 30], maxZoom: 18, duration: 300 });
+            }
+        }
+
+        if (features.length > 0) {
+            preview.getView().fit(source.getExtent(), { size: preview.getSize(), padding: [30, 30, 30, 30], maxZoom: 18 });
+        }
+
+        return {
+            features: features,
+            legend: legendFor([layer]),
+            zoomToFeature: function (feature) {
+                if (feature.getGeometry()) {
+                    fit(feature.getGeometry().getExtent());
+                }
+            },
+            zoomToAll: function () {
+                fit(source.getExtent());
+            }
+        };
+    }
+
     function updateSize() {
         if (olMap) {
             olMap.updateSize();
@@ -474,6 +518,8 @@ let map = (function () {
         zoomToLayers: zoomToLayers,
         getLegend: getLegend,
         onChange: onChange,
-        updateSize: updateSize
+        updateSize: updateSize,
+        createPreview: createPreview,
+        typeLabel: feature => (STYLE_DEFS[featureKey(feature)] || {}).label
     };
 }());

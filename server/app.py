@@ -181,26 +181,43 @@ def update_me(req):
 
 # --------------------------------------------------------------------------- admin
 
-@route('POST', '/api/admin/users/:uid/rights')
-def change_rights(req):
+@route('GET', '/api/admin/users')
+def list_users(req):
     req.require_admin()
-    rights = req.field('rights')
-    grant = bool(req.body.get('grant'))
-    columns = {'read': ['can_read'], 'write': ['can_write'], 'both': ['can_read', 'can_write']}
-    if rights not in columns:
-        raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалиден вид права!')
-    uid = req.params['uid']
-    # Accept either a UID or an email address in the admin form.
-    row = req.conn.execute('SELECT id FROM users WHERE id = ? OR email = ?', (uid, uid)).fetchone()
+    rows = req.conn.execute('SELECT * FROM users ORDER BY created_at, email').fetchall()
+    result = []
+    for row in rows:
+        user = user_to_json(row)
+        user['createdAt'] = row['created_at']
+        user['hasPassword'] = row['password_hash'] is not None
+        result.append(user)
+    return HTTPStatus.OK, result
+
+
+@route('PATCH', '/api/admin/users/:uid')
+def update_user_rights(req):
+    admin = req.require_admin()
+    row = req.conn.execute('SELECT * FROM users WHERE id = ?', (req.params['uid'],)).fetchone()
     if row is None:
         raise ApiError(HTTPStatus.NOT_FOUND, 'Няма такъв потребител!')
-    sets = ', '.join('{} = ?'.format(c) for c in columns[rights])
-    req.conn.execute('UPDATE users SET {} WHERE id = ?'.format(sets),
-                     [1 if grant else 0] * len(columns[rights]) + [row['id']])
-    return HTTPStatus.OK, {'ok': True}
+    columns = {'canRead': 'can_read', 'canWrite': 'can_write', 'isAdmin': 'is_admin'}
+    changes = {col: 1 if req.body[key] else 0 for key, col in columns.items() if key in req.body}
+    if not changes:
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Няма промени!')
+    if row['id'] == admin['id'] and changes.get('is_admin') == 0:
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Не можете да премахнете собствените си администраторски права!')
+    sets = ', '.join('{} = ?'.format(c) for c in changes)
+    req.conn.execute('UPDATE users SET {} WHERE id = ?'.format(sets), list(changes.values()) + [row['id']])
+    row = req.conn.execute('SELECT * FROM users WHERE id = ?', (row['id'],)).fetchone()
+    return HTTPStatus.OK, user_to_json(row)
 
 
 # --------------------------------------------------------------------------- projects
+
+# Number of features in a FeatureCollection (NULL for anything else / invalid JSON).
+FEATURE_COUNT_SQL = ("CASE WHEN json_valid(content) AND json_type(content, '$.features') = 'array' "
+                     "THEN json_array_length(content, '$.features') END")
+
 
 def get_project_or_404(req, pid):
     row = req.conn.execute('SELECT * FROM projects WHERE id = ?', (pid,)).fetchone()
@@ -212,7 +229,10 @@ def get_project_or_404(req, pid):
 @route('GET', '/api/projects')
 def list_projects(req):
     req.require_read()
-    rows = req.conn.execute('SELECT id, name, year FROM projects ORDER BY created_at, id').fetchall()
+    rows = req.conn.execute(
+        'SELECT p.id, p.name, p.year, p.created_at, '
+        '(SELECT COUNT(*) FROM layers l WHERE l.project_id = p.id) AS layer_count '
+        'FROM projects p ORDER BY p.created_at, p.id').fetchall()
     return HTTPStatus.OK, [dict(r) for r in rows]
 
 
@@ -234,10 +254,10 @@ def create_project(req):
 def get_project(req):
     req.require_read()
     project = get_project_or_404(req, req.params['pid'])
-    layers = req.conn.execute('SELECT id, title FROM layers WHERE project_id = ? ORDER BY created_at, id',
-                              (project['id'],)).fetchall()
     result = dict(project)
-    result['data'] = {l['id']: l['title'] for l in layers}
+    result['layers'] = [dict(l) for l in req.conn.execute(
+        'SELECT id, title, created_at, length(CAST(content AS BLOB)) AS size, ' + FEATURE_COUNT_SQL + ' AS feature_count '
+        'FROM layers WHERE project_id = ? ORDER BY created_at, id', (project['id'],)).fetchall()]
     return HTTPStatus.OK, result
 
 
@@ -275,7 +295,7 @@ def add_layer(req):
 
 
 def get_layer_or_404(req):
-    row = req.conn.execute('SELECT id, title, content FROM layers WHERE id = ? AND project_id = ?',
+    row = req.conn.execute('SELECT id, title, content, created_at FROM layers WHERE id = ? AND project_id = ?',
                            (req.params['lid'], req.params['pid'])).fetchone()
     if row is None:
         raise ApiError(HTTPStatus.NOT_FOUND, 'Няма такъв файл!')

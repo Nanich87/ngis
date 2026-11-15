@@ -1,20 +1,59 @@
-<div class="row">
-    <h2><span class="fa">&#xf15b;</span> {{ file.title }}</h2>
-</div>
-<div class="row">
-    <nav aria-label="breadcrumb"><ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/#/">Начало</a></li>
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="/#/projects">Обекти</a></li>
-        <li class="breadcrumb-item"><a href="/#/project/view/{{ project.name }}/{{ project.id }}">{{ project.displayName }}</a></li>
-        <li class="breadcrumb-item active" aria-current="page">{{ file.title }}</li>
-    </ol></nav>
-</div>
-<div class="row text-end">
-    <div class="btn-group">
-        <a href="#" id="ux-btn-save" class="btn btn-success"><span class="fa">&#xf0c7;</span> Запис</a>
-        <a href="#" id="ux-btn-delete" class="btn btn-danger"><span class="fa">&#xf00d;</span> Изтриване</a>
+        <li class="breadcrumb-item"><a href="/#/project/view/{{slug project.name}}/{{ project.id }}">{{ project.name }}</a></li>
+        <li class="breadcrumb-item active text-truncate" aria-current="page">{{ file.title }}</li>
+    </ol>
+</nav>
+
+<div class="page-header">
+    <div class="min-w-0">
+        <h1 class="page-title text-break">{{ file.title }}</h1>
+        <p class="page-subtitle">
+            {{#if stats.valid}}{{count stats.featureCount "геообект" "геообекта"}} · {{/if}}{{bytes stats.size}}{{#if file.created_at}} · качен на {{date file.created_at}}{{/if}}
+        </p>
+    </div>
+    <div class="page-actions">
+        <a href="/#/map/{{ project.id }}" class="btn btn-primary"><span class="fa">&#xf279;</span> Покажи на картата</a>
+        <button type="button" id="ux-btn-download" class="btn btn-neutral"><span class="fa">&#xf019;</span> Изтегляне</button>
+        {{#if canWrite}}
+        <button type="button" id="ux-btn-delete" class="btn btn-outline-danger"><span class="fa">&#xf1f8;</span> Изтриване</button>
+        {{/if}}
     </div>
 </div>
-<div class="row">
-    <textarea class="form-control" rows="15" id="content">{{ file.content }}</textarea>
+
+{{#if stats.valid}}
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card h-100 overflow-hidden">
+            <div id="file-preview-map" class="file-preview-map"></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="card-title fs-6 mb-0">Съдържание</h2>
+            </div>
+            <ul class="list-group list-group-flush" id="file-legend"></ul>
+        </div>
+    </div>
 </div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex align-items-center gap-2">
+        <h2 class="card-title fs-6 mb-0 me-auto">Атрибути</h2>
+        <input id="attribute-search" type="search" class="form-control form-control-sm attribute-search" placeholder="Филтър…" aria-label="Филтър на атрибутите" />
+    </div>
+    <div class="table-responsive attribute-table-wrapper">
+        <table class="table table-sm table-hover mb-0 attribute-table" id="attribute-table"></table>
+    </div>
+    <div class="card-footer small text-body-secondary" id="attribute-footer"></div>
+</div>
+{{else}}
+<div class="alert alert-danger">Файлът не е валиден GeoJSON и не може да бъде показан на картата.</div>
+{{/if}}
+
+<details class="raw-json">
+    <summary>GeoJSON код</summary>
+    <pre class="raw-json-content" id="raw-json"></pre>
+</details>

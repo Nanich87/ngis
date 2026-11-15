@@ -100,7 +100,7 @@ let mapController = (function () {
 
             let input = $('<input type="radio" class="btn-check" name="base-map" autocomplete="off" />')
                 .attr('id', id).val(baseMap.id).prop('checked', baseMap.id === selected);
-            let label = $('<label class="btn btn-outline-secondary"></label>').attr('for', id).attr('title', baseMap.title).text(baseMap.label);
+            let label = $('<label class="btn btn-neutral"></label>').attr('for', id).attr('title', baseMap.title).text(baseMap.label);
 
             group.append(input, label);
         });

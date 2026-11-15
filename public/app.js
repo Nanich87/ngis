@@ -73,10 +73,6 @@
             projectController.edit(context, container);
         });
 
-        this.get('#/project/delete/:id', function (context) {
-            projectController.delete(context, container);
-        });
-
         this.get('#/project/add/:name/:id', function (context) {
             projectController.add(context, container);
         });
