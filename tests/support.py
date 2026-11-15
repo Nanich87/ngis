@@ -158,7 +158,8 @@ class ServerTestCase(unittest.TestCase):
         seed(cls.db_path)
         cls.port = free_port()
         env = dict(os.environ, NGIS_DB=cls.db_path, PYTHONDONTWRITEBYTECODE='1', **cls.server_env)
-        cls.server_log = open(os.path.join(cls.tmpdir.name, 'server.log'), 'w')
+        cls.server_log_path = os.path.join(cls.tmpdir.name, 'server.log')
+        cls.server_log = open(cls.server_log_path, 'w')
         cls.proc = subprocess.Popen([sys.executable, os.path.join(SERVER_DIR, 'app.py'), '--port', str(cls.port)],
                                     env=env, stdout=cls.server_log, stderr=subprocess.STDOUT)
         deadline = time.time() + 10

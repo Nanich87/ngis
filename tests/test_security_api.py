@@ -548,6 +548,21 @@ class StaticAndHeaderTests(ServerTestCase):
                 self.assertTrue(frame in ('DENY', 'SAMEORIGIN') or 'frame-ancestors' in csp, 'clickjacking protection missing')
                 self.assertIsNotNone(r.header('Referrer-Policy'))
 
+    def test_content_security_policy(self):
+        for path in ['/', '/api/me', '/views/map.html']:
+            with self.subTest(path=path):
+                csp = Client(self.port).get(path).header('Content-Security-Policy') or ''
+                directives = {d.strip().split(' ', 1)[0]: d.strip() for d in csp.split(';') if d.strip()}
+                for name in ['default-src', 'script-src', 'style-src', 'img-src', 'connect-src', 'object-src',
+                             'base-uri', 'form-action', 'frame-ancestors']:
+                    self.assertIn(name, directives, csp)
+                self.assertNotIn("'unsafe-inline'", directives['script-src'])
+                self.assertNotIn('*', directives['script-src'])
+                self.assertNotIn('http:', directives['script-src'])
+                self.assertEqual(directives['object-src'], "object-src 'none'")
+                self.assertEqual(directives['frame-ancestors'], "frame-ancestors 'none'")
+                self.assertEqual(directives['connect-src'], "connect-src 'self'")
+
     def test_server_header_does_not_leak_versions(self):
         server = Client(self.port).get('/').header('Server') or ''
         self.assertNotRegex(server, r'Python/\d', 'Server header: ' + server)

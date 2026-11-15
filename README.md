@@ -110,6 +110,8 @@ python3 server/app.py --port 8000          # http://127.0.0.1:8000
 | `NGIS_DB` | Път до базата данни SQLite (по подразбиране `data/ngis.db`) |
 | `NGIS_SECURE_COOKIE=1` | Сесийната бисквитка се маркира като `Secure`. Задайте я, когато сайтът се сервира през HTTPS зад reverse proxy. |
 | `NGIS_FRAME_ANCESTORS` | Кои сайтове могат да вграждат nGIS в рамка (CSP `frame-ancestors`). По подразбиране `'none'`, тоест никой. |
+| `NGIS_CSP_REPORT_URI` | Адрес, на който браузърите да докладват нарушения на Content-Security-Policy (по избор). |
+| `NGIS_CSP` | Заменя изцяло Content-Security-Policy. Ползва се само за тестове или специални случаи. |
 
 ### Команди за управление
 
@@ -168,8 +170,10 @@ python3 -m unittest discover -s tests -v
   - удостоверяване и сесии, права по роли и достъп до чужди данни (IDOR);
   - CSRF, валидация на входа и злоупотреби с HTTP заглавки;
   - path traversal и защитните HTTP заглавки.
-- **`tests/test_security_browser.py`** отваря всички страници в headless Firefox с XSS payload-и във
-  всяко показвано поле и засича дали някой се изпълнява. Пропуска се, ако Firefox не е инсталиран.
+- **`tests/test_security_browser.py`** работи в headless Firefox и се пропуска, ако Firefox не е
+  инсталиран. Прави две проверки:
+  - отваря всички страници с XSS payload-и във всяко показвано поле и засича дали някой се изпълнява;
+  - отваря всички страници под истинската Content-Security-Policy и изисква нула нарушения.
 
 Основни защити:
 
@@ -182,8 +186,12 @@ python3 -m unittest discover -s tests -v
 - **Валидация:** всички полета имат проверка на типа и дължината. URL-ите на снимки трябва да са
   `http(s)`, а файловете трябва да са GeoJSON.
 - **CSRF:** API приема само `application/json`, а бисквитката е `HttpOnly` и `SameSite=Lax`.
-- **HTTP заглавки:** `X-Content-Type-Options`, `X-Frame-Options`, CSP `frame-ancestors` и
-  `Referrer-Policy`. Листингът на директории е изключен и заглавката `Server` не издава версии.
+- **Content-Security-Policy:** скриптове се зареждат само от сайта и от cdnjs, без
+  `'unsafe-inline'`, така че вмъкнат HTML не може да изпълни код. `'unsafe-eval'` е разрешен, защото
+  Handlebars компилира шаблоните в браузъра. Заявките (`connect-src`) са само към сайта,
+  `object-src` е `'none'`, а вграждането в рамка е забранено.
+- **HTTP заглавки:** `X-Content-Type-Options`, `X-Frame-Options` и `Referrer-Policy`. Листингът на
+  директории е изключен и заглавката `Server` не издава версии.
 - **Връзки:** при 30 секунди без активност връзката се затваря, а невалиден `Content-Length` се
   отказва.
 

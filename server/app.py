@@ -40,8 +40,43 @@ LOGIN_IP_MAX_FAILURES = 50         # per IP, across all emails
 PASSWORD_MAX_FAILURES = 10         # wrong "current password" per user
 FAILURE_WINDOW = 15 * 60           # seconds
 
+def _env_header_value(name, default=''):
+    # Environment values end up in a header: no CR/LF.
+    return os.environ.get(name, default).replace('\r', '').replace('\n', '').strip()
+
+
 # Who may embed the site in a frame (CSP source list). Default: nobody (clickjacking protection).
-FRAME_ANCESTORS = os.environ.get('NGIS_FRAME_ANCESTORS', "'none'").replace(';', '').replace('\r', '').replace('\n', '')
+FRAME_ANCESTORS = _env_header_value('NGIS_FRAME_ANCESTORS', "'none'").replace(';', '')
+
+
+def build_content_security_policy():
+    override = _env_header_value('NGIS_CSP')
+    if override:
+        return override
+    directives = [
+        "default-src 'self'",
+        # Handlebars compiles templates at runtime with Function(), hence 'unsafe-eval'.
+        # No 'unsafe-inline': injected markup cannot run scripts.
+        "script-src 'self' https://cdnjs.cloudflare.com 'unsafe-eval'",
+        # Bootswatch imports the Roboto font from Google Fonts.
+        "style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        # Map tiles (OpenStreetMap, Esri), user photo URLs, Bootstrap's data: icons.
+        "img-src 'self' data: blob: https:",
+        "connect-src 'self'",
+        "worker-src 'self' blob:",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        'frame-ancestors ' + FRAME_ANCESTORS,
+    ]
+    report_uri = _env_header_value('NGIS_CSP_REPORT_URI').replace(';', '')
+    if report_uri:
+        directives.append('report-uri ' + report_uri)
+    return '; '.join(directives)
+
+
+CONTENT_SECURITY_POLICY = build_content_security_policy()
 
 PROJECT_NAME_RE = re.compile(r'[a-zA-Z0-9-]{3,20}')
 PROJECT_YEAR_RE = re.compile(r'(19|20)[0-9]{2}')
@@ -502,7 +537,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header('X-Content-Type-Options', 'nosniff')
         # Browsers that support CSP use frame-ancestors and ignore X-Frame-Options.
         self.send_header('X-Frame-Options', 'DENY')
-        self.send_header('Content-Security-Policy', 'frame-ancestors ' + FRAME_ANCESTORS)
+        self.send_header('Content-Security-Policy', CONTENT_SECURITY_POLICY)
         self.send_header('Referrer-Policy', 'same-origin')
         super().end_headers()
 

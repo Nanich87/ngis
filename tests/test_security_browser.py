@@ -29,9 +29,19 @@ class Collector:
 
     def __init__(self):
         self.hits = []
+        self.csp_reports = []
         collector = self
 
         class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+                if urlparse(self.path).path == '/csp':
+                    try:
+                        collector.csp_reports.append(json.loads(body.decode('utf-8')).get('csp-report', {}))
+                    except ValueError:
+                        collector.csp_reports.append({'raw': body[:200]})
+                self._send(b'', 'text/plain')
+
             def do_GET(self):
                 url = urlparse(self.path)
                 q = parse_qs(url.query)
@@ -76,7 +86,10 @@ class StoredXssBrowserTests(ServerTestCase):
         # The pages are rendered inside a frame served by the collector, so allow only that origin
         # (the default 'none' would block the frame and every test would pass without rendering).
         cls.collector = Collector()
-        cls.server_env = {'NGIS_FRAME_ANCESTORS': 'http://127.0.0.1:{}'.format(cls.collector.port)}
+        # A permissive CSP so that this class tests output escaping on its own; the real policy
+        # would block the payloads anyway and hide escaping bugs (see CspBrowserTests).
+        cls.server_env = {'NGIS_CSP': "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; "
+                                      'frame-ancestors http://127.0.0.1:{}'.format(cls.collector.port)}
         super().setUpClass()
         cls.profile = tempfile.mkdtemp(prefix='ngis-ff-')
         cls._seed_hostile_data()
@@ -138,33 +151,11 @@ class StoredXssBrowserTests(ServerTestCase):
 
     @classmethod
     def _prepare_firefox_profile(cls):
-        # First run creates cookies.sqlite; then the admin session cookie is inserted.
-        subprocess.run([FIREFOX, '--headless', '-no-remote', '-profile', cls.profile, '--screenshot',
-                        os.path.join(cls.profile, 'init.png'), 'about:blank'],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
-        conn = sqlite3.connect(os.path.join(cls.profile, 'cookies.sqlite'))
-        columns = {r[1] for r in conn.execute('PRAGMA table_info(moz_cookies)')}
-        now_us = int(time.time() * 1e6)
-        row = {
-            'name': 'ngis_session', 'value': 'xss-session-token', 'host': '127.0.0.1', 'path': '/',
-            # Milliseconds in current Firefox; still far in the future for versions that use seconds.
-            'expiry': int((time.time() + 86400) * 1000),
-            'lastAccessed': now_us, 'creationTime': now_us, 'isSecure': 0, 'isHttpOnly': 1,
-            'sameSite': 1, 'schemeMap': 1, 'updateTime': now_us,
-        }
-        row = {k: v for k, v in row.items() if k in columns}
-        conn.execute('INSERT INTO moz_cookies ({}) VALUES ({})'.format(', '.join(row), ', '.join('?' * len(row))),
-                     list(row.values()))
-        conn.commit()
-        conn.close()
+        prepare_firefox_profile(cls.profile, 'xss-session-token')
 
     def render(self, route):
-        app_url = 'http://127.0.0.1:{}/#/{}'.format(self.port, route)
-        page = 'http://127.0.0.1:{}/page?u={}'.format(self.collector.port, quote(app_url, safe=''))
         self.collector.hits.clear()
-        subprocess.run([FIREFOX, '--headless', '-no-remote', '-profile', self.profile, '--window-size', '1280,800',
-                        '--screenshot', os.path.join(self.profile, 'shot.png'), page],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=90)
+        render(self.profile, self.port, self.collector, route)
         return list(self.collector.hits)
 
     def assertNoXss(self, route):
@@ -196,6 +187,119 @@ class StoredXssBrowserTests(ServerTestCase):
     def test_hostile_route_parameters(self):
         b = self.beacon('route-param')
         self.assertNoXss('project/edit/' + quote('<img src=x onerror="fetch(\'{}\')">'.format(b), safe='') + '/p-xss/layer/l-xss')
+
+
+def prepare_firefox_profile(profile, token):
+    """Creates a Firefox profile with a session cookie for 127.0.0.1."""
+    # First run creates cookies.sqlite; then the session cookie is inserted.
+    subprocess.run([FIREFOX, '--headless', '-no-remote', '-profile', profile, '--screenshot',
+                    os.path.join(profile, 'init.png'), 'about:blank'],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
+    conn = sqlite3.connect(os.path.join(profile, 'cookies.sqlite'))
+    columns = {r[1] for r in conn.execute('PRAGMA table_info(moz_cookies)')}
+    now_us = int(time.time() * 1e6)
+    row = {
+        'name': 'ngis_session', 'value': token, 'host': '127.0.0.1', 'path': '/',
+        # Milliseconds in current Firefox; still far in the future for versions that use seconds.
+        'expiry': int((time.time() + 86400) * 1000),
+        'lastAccessed': now_us, 'creationTime': now_us, 'isSecure': 0, 'isHttpOnly': 1,
+        'sameSite': 1, 'schemeMap': 1, 'updateTime': now_us,
+    }
+    row = {k: v for k, v in row.items() if k in columns}
+    conn.execute('INSERT INTO moz_cookies ({}) VALUES ({})'.format(', '.join(row), ', '.join('?' * len(row))),
+                 list(row.values()))
+    conn.commit()
+    conn.close()
+
+
+def render(profile, port, collector, route):
+    """Opens #/route of the app inside the collector's waiting page in headless Firefox."""
+    app_url = 'http://127.0.0.1:{}/#/{}'.format(port, route)
+    page = 'http://127.0.0.1:{}/page?u={}'.format(collector.port, quote(app_url, safe=''))
+    subprocess.run([FIREFOX, '--headless', '-no-remote', '-profile', profile, '--window-size', '1280,800',
+                    '--screenshot', os.path.join(profile, 'shot.png'), page],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=90)
+
+
+@unittest.skipUnless(FIREFOX, 'Firefox is not installed')
+class CspBrowserTests(ServerTestCase):
+    """Every page must work under the real Content-Security-Policy without a single violation."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.collector = Collector()
+        cls.server_env = {
+            'NGIS_FRAME_ANCESTORS': 'http://127.0.0.1:{}'.format(cls.collector.port),
+            'NGIS_CSP_REPORT_URI': 'http://127.0.0.1:{}/csp'.format(cls.collector.port),
+        }
+        super().setUpClass()
+        cls.profile = tempfile.mkdtemp(prefix='ngis-ff-')
+        expires = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+        conn = sqlite3.connect(cls.db_path)
+        conn.execute('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)', ('csp-session-token', 'u-admin', expires))
+        conn.commit()
+        conn.close()
+        prepare_firefox_profile(cls.profile, 'csp-session-token')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.collector.close()
+        shutil.rmtree(cls.profile, ignore_errors=True)
+        super().tearDownClass()
+
+    def set_photo(self, url):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("UPDATE users SET photo_url = ? WHERE id = 'u-admin'", (url,))
+        conn.commit()
+        conn.close()
+
+    def render_page(self, route, expected_requests):
+        """Renders a page; returns CSP reports. `expected_requests` must show up in the server log."""
+        self.collector.hits.clear()
+        self.collector.csp_reports.clear()
+        with open(self.server_log_path) as f:
+            f.seek(0, 2)
+            render(self.profile, self.port, self.collector, route)
+            time.sleep(0.5)
+            log = f.read()
+        self.assertIn('control', self.collector.hits, 'collector not reachable; test inconclusive')
+        for request in expected_requests:
+            self.assertIn(request, log, 'page #/{} did not load {}; test inconclusive'.format(route, request))
+        return [{k: r.get(k) for k in ('violated-directive', 'blocked-uri', 'source-file', 'line-number')}
+                for r in self.collector.csp_reports]
+
+    def assertNoViolations(self, route, expected_requests):
+        reports = self.render_page(route, expected_requests)
+        self.assertEqual(reports, [], 'CSP violations on #/{}'.format(route))
+
+    def test_reporting_works(self):
+        """Positive control: a plain-http photo URL is blocked by img-src and must be reported."""
+        self.set_photo('http://127.0.0.1:{}/hit?where=insecure-photo'.format(self.collector.port))
+        try:
+            reports = self.render_page('user', ['GET /api/me'])
+        finally:
+            self.set_photo(None)
+        self.assertNotIn('insecure-photo', self.collector.hits, 'img-src did not block a plain-http image')
+        self.assertTrue(any((r.get('violated-directive') or '').startswith('img-src') for r in reports), reports)
+
+    def test_map_page(self):
+        self.assertNoViolations('map/p-alpha', ['GET /api/projects HTTP', 'GET /api/projects/p-alpha/layers HTTP'])
+
+    def test_projects_page(self):
+        self.assertNoViolations('projects', ['GET /api/projects HTTP', 'GET /views/projects.handlebars'])
+
+    def test_project_page(self):
+        self.assertNoViolations('project/view/alpha/p-alpha', ['GET /api/projects/p-alpha HTTP', 'GET /views/view-project.handlebars'])
+
+    def test_file_page(self):
+        self.assertNoViolations('project/edit/alpha/p-alpha/layer/l-alpha',
+                                ['GET /api/projects/p-alpha/layers/l-alpha', 'GET /views/edit-project.handlebars'])
+
+    def test_admin_page(self):
+        self.assertNoViolations('admin', ['GET /api/admin/users', 'GET /views/admin.handlebars'])
+
+    def test_profile_page(self):
+        self.assertNoViolations('user', ['GET /api/me', 'GET /views/user.handlebars'])
 
 
 if __name__ == '__main__':
