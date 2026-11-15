@@ -661,3 +661,11 @@ body.page-map .footer {
 .footer a {
     text-decoration: none;
 }
+
+/* Dark scrollbars (the sidebar and tables scroll on short screens) */
+.map-sidebar-body,
+.attribute-table-wrapper,
+.raw-json-content {
+    scrollbar-color: #3a3a3a transparent;
+    scrollbar-width: thin;
+}

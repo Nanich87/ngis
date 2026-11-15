@@ -47,15 +47,17 @@ nGIS е малка уеб ГИС система за управление на �
 | [OpenLayers](https://openlayers.org/) | 10.11.0 | Изобразяване на картата, четене на GeoJSON, стилове, изскачащи прозорци |
 | [proj4js](https://proj4js.org/) | 2.22.0 | Преобразуване на данни в BGS2005 / UTM / ETRS89 |
 | [Bootstrap](https://getbootstrap.com/) + [Bootswatch Cyborg](https://bootswatch.com/cyborg/) | 5.3.3 | Оформление, компоненти, тъмна тема |
-| [jQuery](https://jquery.com/) | 2.0.3 | Работа с DOM и събития |
+| [jQuery](https://jquery.com/) | 4.0.0 | Работа с DOM и събития |
 | [Sammy.js](http://sammyjs.org/) | 0.7.6 | Маршрутизация по адреса след `#` (`#/map`, `#/projects`, …) |
-| [Handlebars](https://handlebarsjs.com/) | 4.0.2 | HTML шаблони в `public/views/` |
+| [Handlebars](https://handlebarsjs.com/) | 4.7.10 | HTML шаблони в `public/views/` |
 | [toastr](https://github.com/CodeSeven/toastr) | 2.1.4 | Известия |
-| [Moment.js](https://momentjs.com/) | 2.10.6 | Форматиране на дати |
+| [Moment.js](https://momentjs.com/) | 2.31.0 | Форматиране на дати |
 | [Font Awesome](https://fontawesome.com/v4/) | 4.7.0 | Икони |
 
 OpenLayers, proj4js, Bootstrap и toastr се зареждат от cdnjs. Останалите библиотеки са в
-`public/libs/`.
+`public/libs/` и са проверени срещу SRI хешовете на cdnjs. Sammy.js 0.7.6 е последната издадена
+версия. Двете помощни функции, които той ползва и които jQuery 4 премахна (`$.trim` и
+`$.parseJSON`), се връщат от `public/app/jquery-compat.js`.
 
 Подложките са от [OpenStreetMap](https://www.openstreetmap.org/) и
 [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9).
