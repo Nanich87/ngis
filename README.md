@@ -52,15 +52,21 @@ nGIS е малка уеб ГИС система за управление на �
 | [toastr](https://github.com/CodeSeven/toastr) | 2.1.4 | Известия |
 | [Moment.js](https://momentjs.com/) | 2.31.0 | Форматиране на дати |
 | [Font Awesome](https://fontawesome.com/v4/) | 4.7.0 | Икони |
+| [Roboto](https://fontsource.org/fonts/roboto) (@fontsource/roboto) | 5.3.0 | Шрифт на темата (латиница и кирилица, 400 и 700) |
 
-OpenLayers, proj4js, Bootstrap и toastr се зареждат от cdnjs. Останалите библиотеки са в
-`public/libs/` и са проверени срещу SRI хешовете на cdnjs.
+Всички библиотеки, стилове и шрифтове са локални, в `public/libs/` (по една папка за библиотека, с
+версията в името), така че сайтът не зависи от външни CDN-и. Всеки файл е свален от cdnjs и
+проверен срещу публикувания там SRI хеш. Шрифтът е проверен срещу хеша на npm пакета. Единствената
+промяна в тях: от темата Bootswatch е махнат `@import` към Google Fonts, защото Roboto се зарежда от
+`libs/roboto-5.3.0/roboto.css`.
 
 Маршрутизацията по адреса след `#` (`#/map`, `#/projects`, …) е собствена, в
 `public/app/router.js`. Ползва събитието `hashchange` на браузъра.
 
 Подложките са от [OpenStreetMap](https://www.openstreetmap.org/) и
-[Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9).
+[Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9). Това
+е единственото, което се зарежда от интернет. Без връзка интерфейсът и слоевете работят, но
+подложката не се вижда.
 
 ### Бекенд
 
@@ -189,8 +195,8 @@ python3 -m unittest discover -s tests -v
 - **Валидация:** всички полета имат проверка на типа и дължината. URL-ите на снимки трябва да са
   `http(s)`, а файловете трябва да са GeoJSON.
 - **CSRF:** API приема само `application/json`, а бисквитката е `HttpOnly` и `SameSite=Lax`.
-- **Content-Security-Policy:** скриптове се зареждат само от сайта и от cdnjs, без
-  `'unsafe-inline'`, така че вмъкнат HTML не може да изпълни код. `'unsafe-eval'` е разрешен, защото
+- **Content-Security-Policy:** скриптове, стилове и шрифтове се зареждат само от самия сайт
+  (`'self'`), без `'unsafe-inline'`, така че вмъкнат HTML не може да изпълни код. `'unsafe-eval'` е разрешен, защото
   Handlebars компилира шаблоните в браузъра. Заявките (`connect-src`) са само към сайта,
   `object-src` е `'none'`, а вграждането в рамка е забранено.
 - **HTTP заглавки:** `X-Content-Type-Options`, `X-Frame-Options` и `Referrer-Policy`. Листингът на

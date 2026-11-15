@@ -55,12 +55,12 @@ def build_content_security_policy():
         return override
     directives = [
         "default-src 'self'",
+        # All scripts, styles and fonts are served locally (public/libs).
         # Handlebars compiles templates at runtime with Function(), hence 'unsafe-eval'.
         # No 'unsafe-inline': injected markup cannot run scripts.
-        "script-src 'self' https://cdnjs.cloudflare.com 'unsafe-eval'",
-        # Bootswatch imports the Roboto font from Google Fonts.
-        "style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
+        "script-src 'self' 'unsafe-eval'",
+        "style-src 'self'",
+        "font-src 'self'",
         # Map tiles (OpenStreetMap, Esri), user photo URLs, Bootstrap's data: icons.
         "img-src 'self' data: blob: https:",
         "connect-src 'self'",

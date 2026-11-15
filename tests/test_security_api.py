@@ -562,6 +562,10 @@ class StaticAndHeaderTests(ServerTestCase):
                 self.assertEqual(directives['object-src'], "object-src 'none'")
                 self.assertEqual(directives['frame-ancestors'], "frame-ancestors 'none'")
                 self.assertEqual(directives['connect-src'], "connect-src 'self'")
+                # Everything executable or styling the page is self-hosted.
+                self.assertEqual(directives['script-src'], "script-src 'self' 'unsafe-eval'")
+                self.assertEqual(directives['style-src'], "style-src 'self'")
+                self.assertEqual(directives['font-src'], "font-src 'self'")
 
     def test_server_header_does_not_leak_versions(self):
         server = Client(self.port).get('/').header('Server') or ''

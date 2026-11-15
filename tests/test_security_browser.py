@@ -286,7 +286,10 @@ class CspBrowserTests(ServerTestCase):
         self.assertNoViolations('map/p-alpha', ['GET /api/projects HTTP', 'GET /api/projects/p-alpha/layers HTTP'])
 
     def test_projects_page(self):
-        self.assertNoViolations('projects', ['GET /api/projects HTTP', 'GET /views/projects.handlebars'])
+        # Also proves the self-hosted Roboto font (Cyrillic subset) is actually loaded.
+        self.assertNoViolations('projects', ['GET /api/projects HTTP', 'GET /views/projects.handlebars',
+                                             'GET /libs/roboto-5.3.0/files/roboto-cyrillic-400-normal.woff2',
+                                             'GET /libs/openlayers-10.11.0/ol.js', 'GET /libs/bootstrap-5.3.3/bootstrap.bundle.min.js'])
 
     def test_project_page(self):
         self.assertNoViolations('project/view/alpha/p-alpha', ['GET /api/projects/p-alpha HTTP', 'GET /views/view-project.handlebars'])
