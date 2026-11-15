@@ -7,13 +7,22 @@
         if (user) {
             $('#ux-btn-profile').html('<span class="fa">&#xf007;</span> ').append(document.createTextNode(user.email)).attr('href', '/#/user').removeClass('hidden');
             $('#ux-btn-auth').html('<span class="fa">&#xf08b;</span> Изход').attr('href', '/#/logout');
+            $('#ux-btn-admin').toggleClass('hidden', !user.isAdmin);
         } else {
+            $('#ux-btn-admin').addClass('hidden');
             $('#ux-btn-profile').html('').attr('href', '#').addClass('hidden');
             $('#ux-btn-auth').html('<span class="fa">&#xf090;</span> Вход').attr('href', '/#/auth');
         }
     }
 
     authService.onAuthStateChanged(updateNavigation);
+
+    $('#footer-year').text(new Date().getFullYear());
+
+    // Messages can contain user-supplied text (file names, server errors).
+    toastr.options.escapeHtml = true;
+    toastr.options.positionClass = 'toast-bottom-right';
+    toastr.options.newestOnTop = false;
 
     authService.getCurrentUser().then(function (user) {
         updateNavigation(user);

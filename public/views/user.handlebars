@@ -1,61 +1,68 @@
-{{#if notAuthorized}}
-<div class="row">
-    <div class="alert alert-dismissible alert-danger">
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Затваряне"></button>
-        <strong>Access Denided!</strong> You are not authorized to use this page.
+<div class="page-header">
+    <div class="d-flex align-items-center gap-3 min-w-0">
+        <div class="avatar avatar-lg" id="profile-avatar" aria-hidden="true">{{ initials }}</div>
+        <div class="min-w-0">
+            <h1 class="page-title text-break" id="titleName">{{#if user.displayName}}{{ user.displayName }}{{else}}{{ user.email }}{{/if}}</h1>
+            <p class="page-subtitle d-flex flex-wrap gap-1">
+                {{#if user.isAdmin}}<span class="badge text-bg-primary">Администратор</span>{{/if}}
+                {{#if user.canRead}}<span class="badge text-bg-secondary">Четене</span>{{/if}}
+                {{#if user.canWrite}}<span class="badge text-bg-secondary">Запис</span>{{/if}}
+                {{#unless hasAnyRights}}<span class="badge text-bg-warning">Без права за достъп</span>{{/unless}}
+            </p>
+        </div>
+    </div>
+    {{#if user.isAdmin}}
+    <div class="page-actions">
+        <a href="/#/admin" class="btn btn-neutral"><span class="fa">&#xf0c0;</span> Управление на потребители</a>
+    </div>
+    {{/if}}
+</div>
+
+{{#unless hasAnyRights}}
+<div class="alert alert-warning">
+    Все още нямате права за достъп до обектите. Изпратете своя ID на администратор, за да ви ги даде.
+</div>
+{{/unless}}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <form class="card" id="profile-form" novalidate>
+            <div class="card-header">
+                <h2 class="card-title fs-6 mb-0">Профил</h2>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="displayName" class="form-label">Име</label>
+                    <input class="form-control" id="displayName" value="{{ user.displayName }}" type="text" maxlength="100" autocomplete="name" />
+                </div>
+                <div>
+                    <label for="photoURL" class="form-label">Снимка (URL)</label>
+                    <input class="form-control" id="photoURL" value="{{ user.photoURL }}" type="url" placeholder="https://…" aria-describedby="photo-help" />
+                    <div class="invalid-feedback">Въведете адрес, започващ с http:// или https://.</div>
+                    <div class="form-text" id="photo-help">По избор. Без снимка се показват инициалите ви.</div>
+                </div>
+            </div>
+            <div class="card-footer text-end">
+                <button type="submit" id="ux-btn-save" class="btn btn-primary">Запис</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title fs-6 mb-0">Акаунт</h2>
+            </div>
+            <div class="card-body">
+                <dl class="account-details mb-0">
+                    <dt>Email</dt>
+                    <dd class="text-break">{{ user.email }}</dd>
+                    <dt>ID</dt>
+                    <dd class="d-flex align-items-center gap-2">
+                        <code class="text-break" id="uid">{{ user.uid }}</code>
+                        <button type="button" class="btn btn-sm btn-neutral" id="ux-btn-copy-uid" title="Копиране" aria-label="Копиране на ID"><span class="fa">&#xf0c5;</span></button>
+                    </dd>
+                </dl>
+            </div>
+        </div>
     </div>
 </div>
-{{else}}
-<div class="row">
-    <h2><span class="fa">&#xf007;</span> <span id="titleName">{{ user.displayName }}</span></h2>
-</div>
-<div class="row">
-    <div class="col-md-3">
-        <a href="/#/user" class="d-block">
-            <img class="img-thumbnail" src="images/user.png" alt="{{ user.email }}" />
-        </a> {{#if isAdmin}}
-        <p class="text-center"><a href="/#/admin" class="btn btn-primary"><span class="fa">&#xf21b;</span> Контролен панел</a></p>
-        {{/if}}
-    </div>
-    <div class="col-md-9">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th colspan="2"><span class="fa">&#xf2bb;</span> Потребителски данни</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Email</td>
-                    <td>
-                        <input class="form-control" id="email" value="{{ user.email }}" disabled="" type="email" />
-                    </td>
-                </tr>
-                <tr>
-                    <td>ID</td>
-                    <td>
-                        <input class="form-control" id="uid" value="{{ user.uid }}" disabled="" type="text" />
-                    </td>
-                </tr>
-                <tr>
-                    <td>Име</td>
-                    <td>
-                        <input class="form-control" id="displayName" value="{{ user.displayName }}" type="text" />
-                    </td>
-                </tr>
-                <tr>
-                    <td>Снимка (URL)</td>
-                    <td>
-                        <input class="form-control" id="photoURL" value="{{ user.photoURL }}" type="url" />
-                    </td>
-                </tr>
-                <tfoot>
-                    <tr>
-                        <td colspan="2" class="text-end"><button id="ux-btn-save" class="btn btn-success"><span class="fa">&#xf0c7;</span> Запис</button></td>
-                    </tr>
-                </tfoot>
-            </tbody>
-        </table>
-    </div>
-</div>
-{{/if}}

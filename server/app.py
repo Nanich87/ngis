@@ -349,6 +349,12 @@ class Handler(SimpleHTTPRequestHandler):
             self.path = '/index.html'
         return super().do_GET()
 
+    def end_headers(self):
+        # Static files: always revalidate (cheap 304 via Last-Modified) so updates show up immediately.
+        if not self.path.startswith('/api/'):
+            self.send_header('Cache-Control', 'no-cache')
+        super().end_headers()
+
     def do_HEAD(self):
         if self.path.startswith('/api/'):
             return self.send_error(HTTPStatus.METHOD_NOT_ALLOWED)

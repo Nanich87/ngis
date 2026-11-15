@@ -27,6 +27,18 @@ let authController = (function () {
     function initPage(container) {
         pageHelper.setActivePage(pageID);
 
+        authService.getCurrentUser().then(function (user) {
+            if (user) {
+                window.location.href = '#/map';
+            } else {
+                render(container);
+            }
+        }, function () {
+            render(container);
+        });
+    }
+
+    function render(container) {
         $(container).load(pageTemplate, function () {
             setMode('signIn');
 

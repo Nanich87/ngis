@@ -4,7 +4,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
   <title>nGIS</title>
+  <link rel="icon" href="images/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css" type="text/css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.0.1/ol.css" type="text/css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/5.3.3/cyborg/bootstrap.min.css" type="text/css" />
@@ -15,7 +17,7 @@
 <body>
   <nav class="navbar navbar-expand-md bg-dark app-navbar" data-bs-theme="dark" id="app-navbar">
     <div class="container-fluid">
-      <a class="navbar-brand" href="/#/map">nGIS</a>
+      <a class="navbar-brand d-flex align-items-center gap-2" href="/#/map"><img src="images/favicon.svg" alt="" width="24" height="24" />nGIS</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#app-navbar-menu" aria-controls="app-navbar-menu" aria-expanded="false" aria-label="Меню">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -24,6 +26,7 @@
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link" data-id="map" href="/#/map"><span class="fa">&#xf041;</span> Карта</a></li>
           <li class="nav-item"><a class="nav-link" data-id="projects" href="/#/projects"><span class="fa">&#xf1c0;</span> Обекти</a></li>
+          <li class="nav-item"><a class="nav-link hidden" data-id="admin" id="ux-btn-admin" href="/#/admin"><span class="fa">&#xf0c0;</span> Потребители</a></li>
         </ul>
         <ul class="navbar-nav">
           <li class="nav-item"><a class="nav-link hidden" data-id="user" id="ux-btn-profile" href="/#/user"><span class="fa">&#xf007;</span> Профил</a></li>
@@ -35,7 +38,7 @@
   <main id="content" class="container py-4"></main>
   <footer class="footer py-3">
     <div class="container">
-      <p class="text-body-secondary text-center small mb-0">2017 © nGIS.SixEightOne.eu</p>
+      <p class="text-body-secondary text-center small mb-0">© 2017–<span id="footer-year">2026</span> nGIS · <a href="http://sixeightone.eu" class="link-secondary" target="_blank" rel="noopener">SixEightOne.eu</a></p>
     </div>
   </footer>
 
@@ -45,7 +48,7 @@
   <script src="libs/sammy-0.7.6.min.js"></script>
   <script src="libs/handlebars.js"></script>
   <script src="libs/moment.js"></script>
-  <script src="libs/toastr.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/4.0.1/ol.js"></script>
 

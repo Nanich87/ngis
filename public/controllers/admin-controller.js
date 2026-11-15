@@ -2,7 +2,7 @@
 
 let adminController = (function () {
 
-    let pageID = 'user';
+    let pageID = 'admin';
 
     const RIGHTS = [
         { key: 'canRead', label: 'Четене' },
