@@ -1,15 +1,101 @@
 # nGIS
 
-### Features
+nGIS е малка уеб ГИС система за управление на данни от проучване и проектиране, организирани по
+обекти. Всеки обект съдържа GeoJSON файлове: оси на пътища, сгради, граници на имоти, надлези и
+подлези на железопътни линии и други слоеве. Те се разглеждат на интерактивна карта, може да се
+преглеждат атрибутите им и да се управлява кой има право да ги чете и променя.
 
- - Map
- - Projects (Create / List / View / Edit / Delete)
- - Users (Sign in / Sign up)
- - Admin Panel (User rights management)
+Интерфейсът е на български, а приложението поддържа използваните в България координатни системи
+(BGS2005, UTM, ETRS89), както и WGS84 и Web Mercator.
 
-### Running
+## Функционалност
 
-The backend uses only the Python 3 standard library (3.8+) and stores everything in SQLite (`data/ngis.db`, override with `NGIS_DB`).
+- **Карта:** карта на цял екран с подложки OpenStreetMap, сателитна и хибридна и странично меню с
+  всички обекти и файлове:
+  - включване и изключване на слоеве и приближаване до обект или файл;
+  - легенда само с типовете геообекти, които се виждат в момента;
+  - при клик върху геообект изскача прозорец с всичките му атрибути.
+- **Обекти:** списък с търсене, година и брой файлове. Администраторите създават обекти (с проверка
+  на въведеното директно във формата) и ги изтриват (след потвърждение).
+- **Страница на обект:** файлове с брой геообекти, размер и дата на качване. Може да се качват
+  няколко GeoJSON файла наведнъж чрез влачене или избор от компютъра, с резултат за всеки файл.
+- **Страница на файл:** карта за преглед с легенда на съдържанието и таблица с атрибути с филтър.
+  Клик върху ред приближава картата до съответния геообект. Показва се и разпознатата координатна
+  система, файлът може да се изтегли, а GeoJSON кодът може да се види.
+- **Координатни системи:** файловете се преобразуват към проекцията на картата в браузъра (вижте
+  [Координатни системи](#координатни-системи)).
+- **Потребители:** регистрация и вход, профил с име, URL на снимка и смяна на парола, и
+  администраторска страница с превключватели за четене, запис и админ за всеки потребител.
+
+### Роли
+
+| Роля | Може |
+|---|---|
+| Нов потребител | Да влезе и да види профила си. Новият потребител няма достъп, докато администратор не му даде права. |
+| Четене | Да разглежда обекти, файлове и картата |
+| Запис | Всичко от „Четене“, плюс качване и изтриване на файлове |
+| Админ | Всичко, плюс създаване и изтриване на обекти и управление на правата на потребителите |
+
+## Технологии
+
+### Фронтенд
+
+Едностранично приложение (SPA) от статични файлове в `public/`, без стъпка за компилиране.
+
+| Библиотека | Версия | За какво се използва |
+|---|---|---|
+| [OpenLayers](https://openlayers.org/) | 10.11.0 | Изобразяване на картата, четене на GeoJSON, стилове, изскачащи прозорци |
+| [proj4js](https://proj4js.org/) | 2.22.0 | Преобразуване на данни в BGS2005 / UTM / ETRS89 |
+| [Bootstrap](https://getbootstrap.com/) + [Bootswatch Cyborg](https://bootswatch.com/cyborg/) | 5.3.3 | Оформление, компоненти, тъмна тема |
+| [jQuery](https://jquery.com/) | 2.0.3 | Работа с DOM и събития |
+| [Sammy.js](http://sammyjs.org/) | 0.7.6 | Маршрутизация по адреса след `#` (`#/map`, `#/projects`, …) |
+| [Handlebars](https://handlebarsjs.com/) | 4.0.2 | HTML шаблони в `public/views/` |
+| [toastr](https://github.com/CodeSeven/toastr) | 2.1.4 | Известия |
+| [Moment.js](https://momentjs.com/) | 2.10.6 | Форматиране на дати |
+| [Font Awesome](https://fontawesome.com/v4/) | 4.7.0 | Икони |
+
+OpenLayers, proj4js, Bootstrap и toastr се зареждат от cdnjs. Останалите библиотеки са в
+`public/libs/`.
+
+Подложките са от [OpenStreetMap](https://www.openstreetmap.org/) и
+[Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9).
+
+### Бекенд
+
+- **Python 3** (3.8+), само стандартната библиотека: `http.server` сервира статичните файлове и
+  JSON API.
+- **SQLite** (`sqlite3`, режим WAL) пази потребителите, сесиите, обектите и файловете. GeoJSON се
+  съхранява като текст.
+- **Удостоверяване:** паролите се пазят като PBKDF2-SHA256 хешове, а сесиите са в бисквитка с
+  `HttpOnly` и `SameSite=Lax`.
+
+Първоначално приложението работеше на Firebase (Realtime Database, Auth и Hosting). Вижте
+[Миграция от Firebase](#миграция-от-firebase).
+
+## Структура на проекта
+
+```
+public/                  Фронтенд (сервира се както е)
+  index.html             Основна страница, навигация, включване на скриптовете
+  app.js                 Маршрути (Sammy) и състояние на навигацията
+  app/api.js             Обвивка около fetch за JSON API
+  app/map.js             Карта (OpenLayers), стилове, легенда, проекции
+  app/templates.js       Зареждане на Handlebars шаблоните и помощни функции
+  controllers/           По един контролер за всяка страница
+  services/              Заявки към API (вход, обекти, потребители)
+  helpers/               Помощни функции (прозорец за потвърждение, форматиране)
+  views/                 Handlebars / HTML шаблони
+  css/app.css            Стилове на приложението върху Bootstrap
+  samples/               Примерен GeoJSON за тестване
+server/
+  app.py                 HTTP сървър и JSON API
+  db.py                  Връзка със SQLite, хеширане на пароли
+  schema.sql             Схема на базата данни
+  manage.py              Администриране от командния ред и импорт от Firebase
+data/ngis.db             База данни (създава се при първо пускане, не е в git)
+```
+
+## Пускане
 
 ```bash
 python3 server/manage.py init
@@ -17,38 +103,79 @@ python3 server/manage.py create-user admin@example.com --admin
 python3 server/app.py --port 8000          # http://127.0.0.1:8000
 ```
 
-Set `NGIS_SECURE_COOKIE=1` when serving over HTTPS (behind a reverse proxy).
+С `--host 0.0.0.0` (или конкретен адрес) сървърът става достъпен и от други компютри.
 
-### Coordinate systems
+| Променлива на средата | Значение |
+|---|---|
+| `NGIS_DB` | Път до базата данни SQLite (по подразбиране `data/ngis.db`) |
+| `NGIS_SECURE_COOKIE=1` | Сесийната бисквитка се маркира като `Secure`. Задайте я, когато сайтът се сервира през HTTPS зад reverse proxy. |
 
-Uploaded GeoJSON is reprojected to the map (Web Mercator) in the browser with proj4js. Supported:
+### Команди за управление
 
-- WGS84 (EPSG:4326 / CRS84) and Web Mercator (EPSG:3857) – detected automatically
+```bash
+python3 server/manage.py init                                  # създава базата данни
+python3 server/manage.py create-user EMAIL [--admin] [--read] [--write]
+python3 server/manage.py set-password EMAIL
+python3 server/manage.py import-firebase EXPORT.json [--auth USERS.json]
+```
+
+## API
+
+Всички endpoint-и са под `/api`, приемат и връщат JSON и разпознават потребителя по сесийната
+бисквитка.
+
+| Метод | Път | Достъп |
+|---|---|---|
+| `POST` | `/api/auth/signup`, `/api/auth/login`, `/api/auth/logout` | всеки |
+| `GET`, `PATCH` | `/api/me` | влязъл потребител |
+| `POST` | `/api/me/password` | влязъл потребител |
+| `GET` | `/api/projects`, `/api/projects/:id` | четене |
+| `POST` | `/api/projects` | админ |
+| `DELETE` | `/api/projects/:id` | админ |
+| `GET` | `/api/projects/:id/layers`, `/api/projects/:id/layers/:layerId` | четене |
+| `POST` | `/api/projects/:id/layers` | запис |
+| `DELETE` | `/api/projects/:id/layers/:layerId` | запис |
+| `GET` | `/api/admin/users` | админ |
+| `PATCH` | `/api/admin/users/:uid` | админ |
+
+## Координатни системи
+
+Каченият GeoJSON се преобразува в браузъра с proj4js към проекцията на картата (Web Mercator).
+Поддържат се:
+
+- WGS84 (EPSG:4326 / CRS84) и Web Mercator (EPSG:3857), които се разпознават автоматично
 - BGS2005 / CCS2005 (EPSG:7801), BGS2005 / UTM 34N, 35N, 36N (EPSG:7803–7805)
 - WGS84 / UTM 34N, 35N (EPSG:32634, 32635), ETRS89 / UTM 34N, 35N (EPSG:25834, 25835)
 - ETRS89 (EPSG:4258), ETRS89 / LAEA Europe (EPSG:3035)
 
-Projected systems other than Web Mercator must be declared in the file's `crs` member
-(QGIS/GDAL do this on export). Coordinates are read as easting, northing.
+Проекциите, различни от Web Mercator, трябва да са обявени в полето `crs` на файла. QGIS и GDAL го
+добавят при експорт. Координатите се четат в реда изток, север.
 
-### Migrating from Firebase
+EPSG:7804 се ползва с UTM зона 35. Регистърът на EPSG го свързва с преобразуването за зона 34, което
+противоречи на името и на областта му на приложение.
 
-1. Export the Realtime Database: Firebase console → Realtime Database → ⋮ → *Export JSON*.
-2. Export the users: `firebase auth:export users.json --format=json --project tg-gis`.
-3. Import: `python3 server/manage.py import-firebase tg-gis-export.json --auth users.json`
-4. Firebase password hashes cannot be reused – set new ones with `python3 server/manage.py set-password EMAIL`.
+## Миграция от Firebase
 
-Project, file and user IDs are preserved, so old links keep working.
+1. Експортирайте Realtime Database: Firebase console → Realtime Database → ⋮ → *Export JSON*.
+2. Експортирайте потребителите: `firebase auth:export users.json --format=json --project tg-gis`.
+3. Импортирайте: `python3 server/manage.py import-firebase tg-gis-export.json --auth users.json`
+4. Паролите от Firebase не могат да се пренесат, затова задайте нови с
+   `python3 server/manage.py set-password EMAIL`.
 
-### Todos
+Идентификаторите на обекти, файлове и потребители се запазват, така че старите линкове продължават
+да работят.
 
- - Write Tests
- - Add Code Comments
+## Предстои
 
-### License
+- Тестове
+- Поддръжка на Координатна система 1970 (няма EPSG код)
+
+## Лиценз
 
 Code by Nanko Geshkov. Copyright 2017 Nanko Geshkov [http://sixeightone.eu](http://sixeightone.eu)
 
-### Any questions, comments or additions?
+## Въпроси, коментари или предложения?
 
-If you have a feature request or bug report, leave an issue on the [issues page](https://github.com/Nanich87/ngis/issues) or send a [pull request](https://github.com/Nanich87/ngis/pulls).
+Ако имате предложение за нова функционалност или сте открили грешка, оставете issue на
+[страницата с issues](https://github.com/Nanich87/ngis/issues) или изпратете
+[pull request](https://github.com/Nanich87/ngis/pulls).
