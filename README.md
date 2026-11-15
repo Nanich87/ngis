@@ -48,16 +48,16 @@ nGIS е малка уеб ГИС система за управление на �
 | [proj4js](https://proj4js.org/) | 2.22.0 | Преобразуване на данни в BGS2005 / UTM / ETRS89 |
 | [Bootstrap](https://getbootstrap.com/) + [Bootswatch Cyborg](https://bootswatch.com/cyborg/) | 5.3.3 | Оформление, компоненти, тъмна тема |
 | [jQuery](https://jquery.com/) | 4.0.0 | Работа с DOM и събития |
-| [Sammy.js](http://sammyjs.org/) | 0.7.6 | Маршрутизация по адреса след `#` (`#/map`, `#/projects`, …) |
 | [Handlebars](https://handlebarsjs.com/) | 4.7.10 | HTML шаблони в `public/views/` |
 | [toastr](https://github.com/CodeSeven/toastr) | 2.1.4 | Известия |
 | [Moment.js](https://momentjs.com/) | 2.31.0 | Форматиране на дати |
 | [Font Awesome](https://fontawesome.com/v4/) | 4.7.0 | Икони |
 
 OpenLayers, proj4js, Bootstrap и toastr се зареждат от cdnjs. Останалите библиотеки са в
-`public/libs/` и са проверени срещу SRI хешовете на cdnjs. Sammy.js 0.7.6 е последната издадена
-версия. Двете помощни функции, които той ползва и които jQuery 4 премахна (`$.trim` и
-`$.parseJSON`), се връщат от `public/app/jquery-compat.js`.
+`public/libs/` и са проверени срещу SRI хешовете на cdnjs.
+
+Маршрутизацията по адреса след `#` (`#/map`, `#/projects`, …) е собствена, в
+`public/app/router.js`. Ползва събитието `hashchange` на браузъра.
 
 Подложките са от [OpenStreetMap](https://www.openstreetmap.org/) и
 [Esri World Imagery](https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9).
@@ -79,7 +79,8 @@ OpenLayers, proj4js, Bootstrap и toastr се зареждат от cdnjs. Ос�
 ```
 public/                  Фронтенд (сервира се както е)
   index.html             Основна страница, навигация, включване на скриптовете
-  app.js                 Маршрути (Sammy) и състояние на навигацията
+  app.js                 Маршрути и състояние на навигацията
+  app/router.js          Маршрутизатор по адреса след # (hashchange)
   app/api.js             Обвивка около fetch за JSON API
   app/map.js             Карта (OpenLayers), стилове, легенда, проекции
   app/templates.js       Зареждане на Handlebars шаблоните и помощни функции

@@ -48,7 +48,7 @@ let userController = (function () {
                     copyText(user.uid);
                 });
 
-                // Returning false also stops Sammy from treating the submit as a route change.
+                // Returning false keeps the browser from submitting (and reloading) the page.
                 $('#profile-form').on('submit', function () {
                     save();
 

@@ -140,7 +140,7 @@ let projectController = (function () {
             $('#name').trigger('focus');
         });
 
-        // Returning false also stops Sammy from treating the submit as a route change.
+        // Returning false keeps the browser from submitting (and reloading) the page.
         $('#create-project-form').on('submit', function () {
             createProject();
 
