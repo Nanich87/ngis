@@ -202,6 +202,75 @@ nginx презаписва `X-Forwarded-For` с адреса на клиента
 се заобиколи с подправена заглавка. nginx добавя и свое ограничение: 10 опита за вход в минута от
 IP.
 
+Проверка след внедряването:
+
+```bash
+curl -sI http://ВАШИЯТ.ДОМЕЙН/  | grep -iE "^HTTP|^location"        # 301 към https://
+curl -sI https://ВАШИЯТ.ДОМЕЙН/ | grep -iE "^HTTP|^strict|^content-security"
+```
+
+Ако липсва `Strict-Transport-Security` (certbot е пуснат без `--hsts`), добавете в `server` блока
+за 443:
+
+```nginx
+add_header Strict-Transport-Security "max-age=31536000" always;
+```
+
+### Вариант: nginx на друга машина през VPN
+
+Ако nginx е на отделен сървър (например VPS с публичен IP), а приложението е на машина без публичен
+адрес, двете се свързват през VPN, например WireGuard. Трафикът между тях минава през криптирания
+тунел. В примера VPS-ът е `10.8.0.1`, а машината с nGIS е `10.8.0.2`.
+
+1. **DNS:** A запис за домейна към публичния IP на VPS-а. Пренасочване на портове в домашния рутер
+   не е нужно.
+2. **nginx на VPS-а:** същият `deploy/nginx/ngis.conf`, но с VPN адреса на приложението и в двата
+   `location` блока:
+   ```nginx
+   proxy_pass http://10.8.0.2:8000;
+   ```
+   Проверете от VPS-а, че приложението се вижда: `curl -sI http://10.8.0.2:8000/` (трябва да върне
+   `Server: nGIS`).
+3. **Услугата на машината с nGIS:** в `deploy/systemd/ngis.service` сменете три неща.
+   - Сървърът слуша на VPN адреса. Така не се вижда нито от локалната мрежа, нито от интернет:
+     ```ini
+     ExecStart=/usr/bin/python3 /home/h4x0r/ngis/server/app.py --host 10.8.0.2 --port 8000
+     ```
+   - Доверява се на `X-Forwarded-For` от адреса, от който nginx се свързва, тоест VPN адреса на
+     VPS-а:
+     ```ini
+     Environment=NGIS_TRUSTED_PROXIES=10.8.0.1
+     ```
+   - Тръгва след VPN-а, защото без него адресът не съществува. Ако все пак тръгне по-рано,
+     `Restart=on-failure` го опитва отново на всеки 5 секунди:
+     ```ini
+     After=network-online.target wg-quick@wg0.service
+     Wants=network-online.target wg-quick@wg0.service
+     ```
+4. **Защитна стена на машината с nGIS:** другите участници във VPN мрежата също могат да стигнат до
+   порт 8000. Ограничете го само до VPS-а:
+   ```bash
+   sudo ufw allow in on wg0 from 10.8.0.1 to any port 8000 proto tcp
+   sudo ufw deny in on wg0 to any port 8000 proto tcp
+   ```
+
+Ако на VPS-а има и други сайтове, нов поддомейн без собствен HTTPS блок ще отвори сайта, който
+nginx ползва по подразбиране за порт 443, с чужд сертификат. Пуснете certbot за домейна веднага
+след като добавите конфигурацията. За да не става това изобщо, може да се добави сървър по
+подразбиране, който отказва непознати домейни. Пример за nginx 1.18 (изисква пакета `ssl-cert`; от
+nginx 1.19.4 вместо сертификата може да се ползва `ssl_reject_handshake on;`):
+
+```nginx
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    ssl_certificate     /etc/ssl/certs/ssl-cert-snakeoil.pem;
+    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
+    return 444;
+}
+```
+
 ## API
 
 Всички endpoint-и са под `/api`, приемат и връщат JSON и разпознават потребителя по сесийната
