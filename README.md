@@ -180,7 +180,6 @@ systemctl list-timers ngis-backup.timer        # кога е следващот�
 2. **nginx и certbot:**
    ```bash
    sudo apt install nginx certbot python3-certbot-nginx
-   sudo cp deploy/nginx/ngis-proxy.conf /etc/nginx/ngis-proxy.conf
    sudo cp deploy/nginx/ngis.conf /etc/nginx/sites-available/ngis
    sudo sed -i 's/gis.example.com/ВАШИЯТ.ДОМЕЙН/' /etc/nginx/sites-available/ngis
    sudo ln -s /etc/nginx/sites-available/ngis /etc/nginx/sites-enabled/ngis
