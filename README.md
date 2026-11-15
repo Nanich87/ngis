@@ -205,7 +205,7 @@ python3 -m unittest discover -s tests -v
 
 ## Лиценз
 
-Code by Nanko Geshkov. Copyright 2017 Nanko Geshkov [http://sixeightone.eu](http://sixeightone.eu)
+Code by Nanko Geshkov. Copyright 2017 Nanko Geshkov [https://gnnmobile.eu](https://gnnmobile.eu)
 
 ## Въпроси, коментари или предложения?
 
