@@ -10,6 +10,9 @@ import os
 import re
 import secrets
 import sqlite3
+import threading
+import time
+from collections import deque
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.cookies import SimpleCookie
@@ -22,17 +25,95 @@ PUBLIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'publ
 SESSION_COOKIE = 'ngis_session'
 SESSION_TTL = timedelta(days=14)
 MAX_BODY = 64 * 1024 * 1024  # GeoJSON files can be large
+SOCKET_TIMEOUT = 30            # seconds; stops clients from holding a thread open forever
 
-PROJECT_NAME_RE = re.compile(r'^[a-zA-Z0-9-]{3,20}$')
-PROJECT_YEAR_RE = re.compile(r'^(19|20)[0-9]{2}$')
-EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+# Field length limits
+MAX_EMAIL = 254
+MAX_PASSWORD = 1024
+MAX_DISPLAY_NAME = 100
+MAX_URL = 2048
+MAX_TITLE = 255
+
+# Brute-force protection
+LOGIN_MAX_FAILURES = 10            # per email + IP
+LOGIN_IP_MAX_FAILURES = 50         # per IP, across all emails
+PASSWORD_MAX_FAILURES = 10         # wrong "current password" per user
+FAILURE_WINDOW = 15 * 60           # seconds
+
+# Who may embed the site in a frame (CSP source list). Default: nobody (clickjacking protection).
+FRAME_ANCESTORS = os.environ.get('NGIS_FRAME_ANCESTORS', "'none'").replace(';', '').replace('\r', '').replace('\n', '')
+
+PROJECT_NAME_RE = re.compile(r'[a-zA-Z0-9-]{3,20}')
+PROJECT_YEAR_RE = re.compile(r'(19|20)[0-9]{2}')
+EMAIL_RE = re.compile(r'[^@\s]+@[^@\s]+\.[^@\s]+')
+HTTP_URL_RE = re.compile(r'https?://[^\s"\'<>`\\]+', re.IGNORECASE)
+SESSION_TOKEN_RE = re.compile(r'[A-Za-z0-9_-]{1,128}')
+GEOJSON_TYPES = {'FeatureCollection', 'Feature', 'Point', 'MultiPoint', 'LineString', 'MultiLineString',
+                 'Polygon', 'MultiPolygon', 'GeometryCollection'}
+
+# Verified against when the email is unknown, so both cases take the same time.
+DUMMY_PASSWORD_HASH = db.hash_password(secrets.token_urlsafe(16))
 
 
 class ApiError(Exception):
-    def __init__(self, status, message):
+    def __init__(self, status, message, headers=None):
         super().__init__(message)
         self.status = status
         self.message = message
+        self.headers = headers or {}
+
+
+class FailureLimiter:
+    """Counts failures per key in a sliding window (in memory, per process)."""
+
+    def __init__(self, max_failures, window):
+        self.max_failures = max_failures
+        self.window = window
+        self.failures = {}
+        self.lock = threading.Lock()
+
+    def _prune(self, key, now):
+        queue = self.failures.get(key)
+        while queue and queue[0] <= now - self.window:
+            queue.popleft()
+        if queue is not None and not queue:
+            del self.failures[key]
+        return self.failures.get(key)
+
+    def retry_after(self, key):
+        """Seconds until the key may try again, or 0 if it is not blocked."""
+        now = time.monotonic()
+        with self.lock:
+            queue = self._prune(key, now)
+            if queue is None or len(queue) < self.max_failures:
+                return 0
+            return int(queue[0] + self.window - now) + 1
+
+    def fail(self, key):
+        now = time.monotonic()
+        with self.lock:
+            if len(self.failures) > 100000:  # bound memory under attack
+                for k in list(self.failures):
+                    self._prune(k, now)
+            self.failures.setdefault(key, deque()).append(now)
+
+    def reset(self, key):
+        with self.lock:
+            self.failures.pop(key, None)
+
+
+login_limiter = FailureLimiter(LOGIN_MAX_FAILURES, FAILURE_WINDOW)
+login_ip_limiter = FailureLimiter(LOGIN_IP_MAX_FAILURES, FAILURE_WINDOW)
+password_limiter = FailureLimiter(PASSWORD_MAX_FAILURES, FAILURE_WINDOW)
+
+
+def check_limit(limiter, key):
+    seconds = limiter.retry_after(key)
+    if seconds:
+        minutes = max(1, (seconds + 59) // 60)
+        raise ApiError(HTTPStatus.TOO_MANY_REQUESTS,
+                       'Твърде много неуспешни опити. Опитайте отново след {} мин.'.format(minutes),
+                       {'Retry-After': str(seconds)})
 
 
 def now_utc():
@@ -110,11 +191,21 @@ class Request:
             raise ApiError(HTTPStatus.FORBIDDEN, 'Нямате администраторски права!')
         return user
 
-    def field(self, name, required=True):
+    def field(self, name, required=True, max_length=None):
         value = self.body.get(name) if isinstance(self.body, dict) else None
-        if required and (not isinstance(value, str) or value == ''):
+        if value is None and not required:
+            return None
+        if not isinstance(value, str):
+            raise ApiError(HTTPStatus.BAD_REQUEST, ('Липсва поле: ' if value is None else 'Невалидна стойност: ') + name)
+        if required and value == '':
             raise ApiError(HTTPStatus.BAD_REQUEST, 'Липсва поле: ' + name)
+        if max_length is not None and len(value) > max_length:
+            raise ApiError(HTTPStatus.BAD_REQUEST, 'Твърде дълга стойност: ' + name)
         return value
+
+    @property
+    def client_ip(self):
+        return self.handler.client_address[0]
 
 
 # --------------------------------------------------------------------------- auth
@@ -129,9 +220,9 @@ def start_session(req, user_id):
 
 @route('POST', '/api/auth/signup')
 def signup(req):
-    email = req.field('email').strip()
-    password = req.field('password')
-    if not EMAIL_RE.match(email):
+    email = req.field('email', max_length=MAX_EMAIL).strip()
+    password = req.field('password', max_length=MAX_PASSWORD)
+    if not EMAIL_RE.fullmatch(email):
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалиден Email адрес!')
     if len(password) < 6:
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Паролата трябва да е поне 6 символа!')
@@ -145,11 +236,20 @@ def signup(req):
 
 @route('POST', '/api/auth/login')
 def login(req):
-    email = req.field('email').strip()
-    password = req.field('password')
+    email = req.field('email', max_length=MAX_EMAIL).strip()
+    password = req.field('password', max_length=MAX_PASSWORD)
+    key = (req.client_ip, email.lower())
+    check_limit(login_ip_limiter, req.client_ip)
+    check_limit(login_limiter, key)
     row = req.conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-    if row is None or not db.verify_password(password, row['password_hash']):
+    # Always run the hash so unknown emails take as long as wrong passwords.
+    stored = row['password_hash'] if row is not None and row['password_hash'] else DUMMY_PASSWORD_HASH
+    valid = db.verify_password(password, stored) and row is not None and row['password_hash'] is not None
+    if not valid:
+        login_limiter.fail(key)
+        login_ip_limiter.fail(req.client_ip)
         raise ApiError(HTTPStatus.UNAUTHORIZED, 'Грешен Email адрес или парола!')
+    login_limiter.reset(key)
     start_session(req, row['id'])
     return HTTPStatus.OK, user_to_json(row)
 
@@ -171,8 +271,10 @@ def me(req):
 @route('PATCH', '/api/me')
 def update_me(req):
     user = req.require_user()
-    display_name = req.field('displayName', required=False)
-    photo_url = req.field('photoURL', required=False)
+    display_name = (req.field('displayName', required=False, max_length=MAX_DISPLAY_NAME) or '').strip()
+    photo_url = (req.field('photoURL', required=False, max_length=MAX_URL) or '').strip()
+    if photo_url and not HTTP_URL_RE.fullmatch(photo_url):
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Адресът на снимката трябва да започва с http:// или https://')
     req.conn.execute('UPDATE users SET display_name = ?, photo_url = ? WHERE id = ?',
                      (display_name or None, photo_url or None, user['id']))
     row = req.conn.execute('SELECT * FROM users WHERE id = ?', (user['id'],)).fetchone()
@@ -182,10 +284,13 @@ def update_me(req):
 @route('POST', '/api/me/password')
 def change_password(req):
     user = req.require_user()
-    current = req.field('currentPassword')
-    new = req.field('newPassword')
+    current = req.field('currentPassword', max_length=MAX_PASSWORD)
+    new = req.field('newPassword', max_length=MAX_PASSWORD)
+    check_limit(password_limiter, user['id'])
     if not db.verify_password(current, user['password_hash']):
+        password_limiter.fail(user['id'])
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Текущата парола е грешна!')
+    password_limiter.reset(user['id'])
     if len(new) < 6:
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Новата парола трябва да е поне 6 символа!')
     if new == current:
@@ -219,6 +324,8 @@ def update_user_rights(req):
     if row is None:
         raise ApiError(HTTPStatus.NOT_FOUND, 'Няма такъв потребител!')
     columns = {'canRead': 'can_read', 'canWrite': 'can_write', 'isAdmin': 'is_admin'}
+    if any(key in req.body and not isinstance(req.body[key], bool) for key in columns):
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Правата трябва да са true или false!')
     changes = {col: 1 if req.body[key] else 0 for key, col in columns.items() if key in req.body}
     if not changes:
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Няма промени!')
@@ -259,9 +366,9 @@ def create_project(req):
     req.require_admin()
     name = req.field('name').strip()
     year = req.field('year').strip()
-    if not PROJECT_NAME_RE.match(name):
+    if not PROJECT_NAME_RE.fullmatch(name):
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалидно име на обект!')
-    if not PROJECT_YEAR_RE.match(year):
+    if not PROJECT_YEAR_RE.fullmatch(year):
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалидна година!')
     pid = db.new_id()
     req.conn.execute('INSERT INTO projects (id, name, year) VALUES (?, ?, ?)', (pid, name, year))
@@ -300,11 +407,15 @@ def list_layers(req):
 def add_layer(req):
     req.require_write()
     get_project_or_404(req, req.params['pid'])
-    title = req.field('title').strip()
+    title = req.field('title', max_length=MAX_TITLE).strip()
     content = req.field('content')
+    if not title:
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Липсва поле: title')
     try:
-        json.loads(content)
-    except ValueError:
+        geojson = json.loads(content)
+    except (ValueError, RecursionError):
+        geojson = None
+    if not isinstance(geojson, dict) or not isinstance(geojson.get('type'), str) or geojson['type'] not in GEOJSON_TYPES:
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Файлът не е валиден GeoJSON!')
     lid = db.new_id()
     req.conn.execute('INSERT INTO layers (id, project_id, title, content) VALUES (?, ?, ?, ?)',
@@ -337,6 +448,12 @@ def delete_layer(req):
 # --------------------------------------------------------------------------- HTTP handler
 
 class Handler(SimpleHTTPRequestHandler):
+    timeout = SOCKET_TIMEOUT
+
+    def version_string(self):
+        # Do not advertise Python / http.server versions.
+        return 'nGIS'
+
     # Always declare UTF-8 for text assets so Cyrillic is decoded correctly.
     extensions_map = {
         **SimpleHTTPRequestHandler.extensions_map,
@@ -354,9 +471,20 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=PUBLIC_DIR, **kwargs)
 
     def session_token(self):
-        cookie = SimpleCookie(self.headers.get('Cookie', ''))
+        try:
+            cookie = SimpleCookie(self.headers.get('Cookie', ''))
+        except Exception:
+            return None
         morsel = cookie.get(SESSION_COOKIE)
-        return morsel.value if morsel else None
+        # Tokens we issue are URL-safe base64; anything else cannot be a session.
+        if morsel is None or not SESSION_TOKEN_RE.fullmatch(morsel.value):
+            return None
+        return morsel.value
+
+    def list_directory(self, path):
+        # No directory listings.
+        self.send_error(HTTPStatus.NOT_FOUND)
+        return None
 
     def do_GET(self):
         if self.path.startswith('/api/'):
@@ -371,6 +499,11 @@ class Handler(SimpleHTTPRequestHandler):
         # Static files: always revalidate (cheap 304 via Last-Modified) so updates show up immediately.
         if not self.path.startswith('/api/'):
             self.send_header('Cache-Control', 'no-cache')
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        # Browsers that support CSP use frame-ancestors and ignore X-Frame-Options.
+        self.send_header('X-Frame-Options', 'DENY')
+        self.send_header('Content-Security-Policy', 'frame-ancestors ' + FRAME_ANCESTORS)
+        self.send_header('Referrer-Policy', 'same-origin')
         super().end_headers()
 
     def do_HEAD(self):
@@ -406,7 +539,7 @@ class Handler(SimpleHTTPRequestHandler):
         except ApiError as e:
             if conn is not None:
                 conn.rollback()
-            self.send_json(e.status, {'error': e.message})
+            self.send_json(e.status, {'error': e.message}, headers=e.headers)
         except Exception:
             if conn is not None:
                 conn.rollback()
@@ -424,24 +557,31 @@ class Handler(SimpleHTTPRequestHandler):
         # Requiring application/json forces a CORS preflight for cross-site requests (CSRF guard).
         if not self.headers.get('Content-Type', '').startswith('application/json'):
             raise ApiError(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, 'Очаква се application/json')
-        length = int(self.headers.get('Content-Length') or 0)
+        header = (self.headers.get('Content-Length') or '0').strip()
+        if not header.isdigit():
+            self.close_connection = True  # the body length is unknown, so the stream cannot be reused
+            raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалиден Content-Length')
+        length = int(header)
         if length > MAX_BODY:
+            self.close_connection = True
             raise ApiError(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, 'Файлът е твърде голям!')
         raw = self.rfile.read(length) if length else b''
         try:
             data = json.loads(raw.decode('utf-8')) if raw else {}
-        except ValueError:
+        except (ValueError, RecursionError):
             raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалиден JSON')
         if not isinstance(data, dict):
             raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалиден JSON')
         return data
 
-    def send_json(self, status, payload, cookie=None):
+    def send_json(self, status, payload, cookie=None, headers=None):
         data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
         self.send_response(status)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(data)))
         self.send_header('Cache-Control', 'no-store')
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         if cookie is not None:
             token, max_age = cookie
             self.send_header('Set-Cookie', '{}={}; Path=/; Max-Age={}; HttpOnly; SameSite=Lax{}'.format(
