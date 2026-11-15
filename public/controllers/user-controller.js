@@ -7,49 +7,30 @@ let userController = (function () {
     function initPage(container) {
         pageHelper.setActivePage(pageID);
 
-        firebase.auth().onAuthStateChanged(function (user) {
-            if (user) {
-                templates.get('user').then(function (template) {
-                    userService.isAdmin(user.uid).then(function (snapshot) {
-                        let data = {
-                            isAdmin: snapshot.val() !== null ? true : false,
-                            user: user,
-                            notAuthorized: false,
-                        };
+        authService.requireUser().then(function (user) {
+            templates.get('user').then(function (template) {
+                let data = {
+                    isAdmin: user.isAdmin,
+                    user: user,
+                    notAuthorized: false
+                };
 
-                        $(container).html(template(data));
+                $(container).html(template(data));
 
-                        document.title = user.displayName !== null ? user.displayName : user.email;
+                document.title = user.displayName ? user.displayName : user.email;
 
-                        $('#ux-btn-save').click(function () {
-                            let displayName = $('#displayName').val();
-                            let photoURL = $('#photoURL').val();
+                $('#ux-btn-save').click(function () {
+                    let displayName = $('#displayName').val();
+                    let photoURL = $('#photoURL').val();
 
-                            user.updateProfile({
-                                displayName: displayName,
-                                photoURL: photoURL
-                            }).then(function () {
-                                $('#titleName').text(displayName);
-                                toastr.success('Данните бяха записани успешно!');
-                            }, function (error) {
-                                toastr.error('Възникнала е грешка при записването на данните!');
-                            });
-                        });
+                    authService.updateProfile(displayName, photoURL).then(function () {
+                        $('#titleName').text(displayName);
+                        toastr.success('Данните бяха записани успешно!');
                     }, function (error) {
-                        let data = {
-                            isAdmin: false,
-                            user: null,
-                            notAuthorized: true,
-                        };
-
-                        $(container).html(template(data));
-
-                        document.title = 'Access Denided';
+                        toastr.error('Възникнала е грешка при записването на данните!');
                     });
                 });
-            } else {
-                window.location.href = '#/auth';
-            }
+            });
         });
     }
 

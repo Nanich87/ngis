@@ -2,81 +2,53 @@
 
 let projectService = (function () {
 
+    function url(...parts) {
+        return '/api/projects' + parts.map(p => '/' + encodeURIComponent(p)).join('');
+    }
+
     function createProject(name, year) {
-        let projectRef = firebase.app().database().ref();
-        let projects = projectRef.child('projects');
-
-        return projects.push({
-            name: name,
-            year: year
-        });
+        return api.post(url(), { name: name, year: year });
     }
 
+    // Also deletes all of the project's files (ON DELETE CASCADE).
     function deleteProject(id) {
-        let ref = firebase.app().database().ref();
-        let projects = ref.child('projects');
-
-        return projects.child(id).remove();
-    }
-
-    function deleteProjectData(id) {
-        let ref = firebase.app().database().ref();
-        let projects = ref.child('project-data');
-
-        return projects.child(id).remove();
+        return api.delete(url(id));
     }
 
     function getProjects() {
-        return firebase.database().ref('/projects').once('value');
+        return api.get(url());
     }
 
+    // { id, name, year, data: { fileId: title } }
     function getProjectById(id) {
-        return firebase.database().ref('/projects/' + id).once('value');
+        return api.get(url(id));
     }
 
+    // [{ id, title, content }]
     function getProjectData(id) {
-        return firebase.database().ref('/project-data/' + id + '/data').once('value');
+        return api.get(url(id, 'layers'));
     }
 
     function getProjectDataByFileId(pid, fid) {
-        return firebase.database().ref('/project-data/' + pid + '/data/' + fid).once('value');
+        return api.get(url(pid, 'layers', fid));
     }
 
     function removeProjectDataByFileId(pid, fid) {
-        return firebase.database().ref('/project-data/' + pid + '/data/' + fid).remove();
-    }
-
-    function removeProjectDataReferenceByFileId(pid, fid) {
-        return firebase.database().ref('/projects/' + pid + '/data/' + fid).remove();
+        return api.delete(url(pid, 'layers', fid));
     }
 
     function addProjectData(id, title, content) {
-        return firebase.database().ref('/project-data/' + id + '/data').push({ title: title, content: content });
-    }
-
-    function addProjectDataReference(id, key, title) {
-        return firebase.database().ref('/projects/' + id + '/data/' + key).set(title);
-    }
-
-    function uploadFile(project, file) {
-        let storageRef = firebase.storage().ref(project);
-        let fileRef = storageRef.child(file.name);
-
-        return fileRef.put(file);
+        return api.post(url(id, 'layers'), { title: title, content: content });
     }
 
     return {
         createProject: createProject,
         deleteProject: deleteProject,
-        deleteProjectData: deleteProjectData,
         getProjects: getProjects,
         getProjectById: getProjectById,
         getProjectData: getProjectData,
-        uploadFile: uploadFile,
         addProjectData: addProjectData,
-        addProjectDataReference: addProjectDataReference,
         getProjectDataByFileId: getProjectDataByFileId,
-        removeProjectDataByFileId: removeProjectDataByFileId,
-        removeProjectDataReferenceByFileId: removeProjectDataReferenceByFileId
+        removeProjectDataByFileId: removeProjectDataByFileId
     };
 }());

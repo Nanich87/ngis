@@ -2,46 +2,24 @@
 
 let userService = (function () {
 
-    function getUserInfo(id) {
-
-    }
-
-    function isAdmin(userID) {
-        return firebase.database().ref('/groups/admins/').child(userID).once('value');
+    // rights: 'read' | 'write' | 'both'; userID may be a UID or an email address
+    function changeRights(userID, rights, grant) {
+        return api.post('/api/admin/users/' + encodeURIComponent(userID) + '/rights', {
+            rights: rights,
+            grant: grant
+        });
     }
 
     function addRights(userID, rights) {
-        switch (rights) {
-            case 'read':
-                return firebase.database().ref('/access/read/' + userID).set(true);
-            case 'write':
-                return firebase.database().ref('/access/write/' + userID).set(true);
-            case 'both':
-                let addReadAccessPromise = firebase.database().ref('/access/read/' + userID).set(true);
-                let addWriteAccessPromise = firebase.database().ref('/access/write/' + userID).set(true);
-
-                return Promise.all([addReadAccessPromise, addWriteAccessPromise]);
-        }
+        return changeRights(userID, rights, true);
     }
 
     function removeRights(userID, rights) {
-        switch (rights) {
-            case 'read':
-                return firebase.database().ref('/access/read/' + userID).remove();
-            case 'write':
-                return firebase.database().ref('/access/write/' + userID).remove();
-            case 'both':
-                let removeReadAccessPromise = firebase.database().ref('/access/read/' + userID).remove();
-                let removeWriteAccessPromise = firebase.database().ref('/access/write/' + userID).remove();
-
-                return Promise.all([removeReadAccessPromise, removeWriteAccessPromise]);
-        }
+        return changeRights(userID, rights, false);
     }
 
     return {
-        getUserInfo: getUserInfo,
         addRights: addRights,
-        removeRights: removeRights,
-        isAdmin: isAdmin
+        removeRights: removeRights
     };
 }());

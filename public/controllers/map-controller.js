@@ -37,29 +37,31 @@ let mapController = (function () {
             let mapContainer = $('#map');
 
             mapContainer.fadeTo('slow', 0.5, function () {
-                firebase.auth().onAuthStateChanged(function (user) {
-                    if (user) {
-                        projectService.getProjectData(id).then(function (snapshot) {
-                            snapshot.forEach(function (data) {
-                                let vectorSource = new ol.source.Vector({
-                                    features: (new ol.format.GeoJSON()).readFeatures(JSON.parse(data.val().content))
-                                });
-
-                                let vectorLayer = new ol.layer.Vector({
-                                    source: vectorSource,
-                                    name: data.val().title
-                                });
-
-                                map.addLayer(vectorLayer);
-                            });
-
-                            map.zoomToMaxExtent();
-
-                            mapContainer.fadeTo('slow', 1);
+                authService.requireUser().then(function () {
+                    return projectService.getProjectData(id);
+                }).then(function (layers) {
+                    layers.forEach(function (layer) {
+                        let vectorSource = new ol.source.Vector({
+                            features: (new ol.format.GeoJSON()).readFeatures(JSON.parse(layer.content))
                         });
-                    } else {
-                        window.location.href = '#/auth';
+
+                        let vectorLayer = new ol.layer.Vector({
+                            source: vectorSource,
+                            name: layer.title
+                        });
+
+                        map.addLayer(vectorLayer);
+                    });
+
+                    if (layers.length > 0) {
+                        map.zoomToMaxExtent();
                     }
+
+                    mapContainer.fadeTo('slow', 1);
+                }, function (error) {
+                    mapContainer.fadeTo('slow', 1);
+
+                    toastr.error(error.message);
                 });
             });
         });

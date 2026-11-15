@@ -4,7 +4,6 @@ let projectController = (function () {
 
     let pageID = 'projects';
     let pageTitle = 'Обекти';
-    let projectsTemplate = './views/projects.html';
 
     let isAdmin = false;
 
@@ -13,50 +12,34 @@ let projectController = (function () {
 
         pageHelper.setActivePage(pageID);
 
-        firebase.auth().onAuthStateChanged(function (user) {
-            if (user) {
-                templates.get('projects').then(function (template) {
-                    userService.isAdmin(user.uid).then(function (snapshot) {
-                        if (snapshot.val() !== null) {
-                            isAdmin = true;
-                        } else {
-                            isAdmin = false;
-                        }
+        authService.requireUser().then(function (user) {
+            templates.get('projects').then(function (template) {
+                isAdmin = user.isAdmin;
 
-                        let data = {
-                            isAdmin: isAdmin,
-                            notAuthorized: false
-                        };
+                if (!user.canRead && !user.isAdmin) {
+                    $(container).html(template({ isAdmin: false, notAuthorized: true }));
 
-                        $(container).html(template(data));
+                    document.title = 'Access Denided';
 
-                        projectService.getProjects().then(function (snapshot) {
-                            snapshot.forEach(function (project) {
-                                addProjectToList('#projects', project.key, project.val().name);
-                            });
+                    return;
+                }
 
-                            $('.loading-indicator').removeClass('visible').addClass('hidden');
+                $(container).html(template({ isAdmin: isAdmin, notAuthorized: false }));
 
-                            $('#projects').removeClass('hidden');
-                        }, function (error) {
-                            toastr.error('Не може да намери обекти!');
-                        });
-
-                        $('#ux-btn-create-project').click(createProject);
-                    }, function (error) {
-                        let data = {
-                            isAdmin: isAdmin,
-                            notAuthorized: true
-                        };
-
-                        $(container).html(template(data));
-
-                        document.title = 'Access Denided';
+                projectService.getProjects().then(function (projects) {
+                    projects.forEach(function (project) {
+                        addProjectToList('#projects', project.id, project.name);
                     });
+
+                    $('.loading-indicator').removeClass('visible').addClass('hidden');
+
+                    $('#projects').removeClass('hidden');
+                }, function (error) {
+                    toastr.error('Не може да намери обекти!');
                 });
-            } else {
-                window.location.href = '#/auth';
-            }
+
+                $('#ux-btn-create-project').click(createProject);
+            });
         });
     }
 
@@ -82,34 +65,26 @@ let projectController = (function () {
     function viewProject(context, container) {
         let id = context.params.id || null;
 
-        firebase.auth().onAuthStateChanged(function (user) {
-            if (user) {
-                templates.get('view-project').then(function (template) {
-                    projectService.getProjectById(id).then(function (snapshot) {
-                        let data = {
-                            name: snapshot.val().name.toLowerCase(),
-                            year: snapshot.val().year,
-                            data: snapshot.val().data,
-                            id: id,
-                            displayName: snapshot.val().name
-                        };
+        authService.requireUser().then(function () {
+            templates.get('view-project').then(function (template) {
+                projectService.getProjectById(id).then(function (project) {
+                    let data = {
+                        name: project.name.toLowerCase(),
+                        year: project.year,
+                        data: project.data,
+                        id: id,
+                        displayName: project.name
+                    };
 
-                        $(container).html(template(data));
+                    $(container).html(template(data));
 
-                        document.title = snapshot.val().name;
+                    document.title = project.name;
 
-                        pageHelper.setActivePage(pageID);
-
-                        $('#ux-btn-upload-file').click(function () {
-                            let file = $('#file')[0].files[0];
-
-                            saveFileContent(id, file);
-                        });
-                    });
+                    pageHelper.setActivePage(pageID);
+                }, function (error) {
+                    toastr.error(error.message);
                 });
-            } else {
-                window.location.href = '#/auth';
-            }
+            });
         });
     }
 
@@ -120,51 +95,48 @@ let projectController = (function () {
 
         if (pid === null || fid === null || name === null) {
             window.location.href = '#/';
+
+            return;
         }
 
-        firebase.auth().onAuthStateChanged(function (user) {
-            if (user) {
-                templates.get('edit-project').then(function (template) {
-                    projectService.getProjectDataByFileId(pid, fid).then(function (snapshot) {
-                        let data = {
-                            project: {
-                                id: pid,
-                                name: name.toLowerCase(),
-                                displayName: name
-                            },
-                            file: {
-                                title: snapshot.val().title,
-                                content: snapshot.val().content
-                            }
-                        };
+        authService.requireUser().then(function () {
+            templates.get('edit-project').then(function (template) {
+                projectService.getProjectDataByFileId(pid, fid).then(function (layer) {
+                    let data = {
+                        project: {
+                            id: pid,
+                            name: name.toLowerCase(),
+                            displayName: name
+                        },
+                        file: {
+                            title: layer.title,
+                            content: layer.content
+                        }
+                    };
 
-                        $(container).html(template(data));
+                    $(container).html(template(data));
 
-                        document.title = data.file.title;
+                    document.title = data.file.title;
 
-                        pageHelper.setActivePage(pageID);
+                    pageHelper.setActivePage(pageID);
 
-                        $('#ux-btn-save').click(function () {
+                    $('#ux-btn-save').click(function () {
 
-                        });
+                    });
 
-                        $('#ux-btn-delete').click(function () {
-                            let removeProjectDataByFileIdPromise = projectService.removeProjectDataByFileId(pid, fid);
-                            let removeProjectDataReferenceByFileIdPromise = projectService.removeProjectDataReferenceByFileId(pid, fid);
+                    $('#ux-btn-delete').click(function () {
+                        projectService.removeProjectDataByFileId(pid, fid).then(function () {
+                            toastr.success('Файлът беше изтрит успешно!');
 
-                            Promise.all([removeProjectDataByFileIdPromise, removeProjectDataReferenceByFileIdPromise]).then(values => {
-                                toastr.success('Файлът беше изтрит успешно!');
-
-                                window.location.href = '/#/project/view/' + name.toLowerCase() + '/' + pid;
-                            }, reason => {
-                                toastr.error('Възникнала е грешка при изтриването на файла!');
-                            });
+                            window.location.href = '/#/project/view/' + name.toLowerCase() + '/' + pid;
+                        }, function (error) {
+                            toastr.error('Възникнала е грешка при изтриването на файла!');
                         });
                     });
+                }, function (error) {
+                    toastr.error(error.message);
                 });
-            } else {
-                window.location.href = '#/auth';
-            }
+            });
         });
     }
 
@@ -174,30 +146,34 @@ let projectController = (function () {
 
         if (id === null || name === null) {
             window.location.href = '#/';
+
+            return;
         }
 
-        firebase.auth().onAuthStateChanged(function (user) {
-            if (user) {
-                templates.get('add-project-data').then(function (template) {
-                    let data = {
-                        name: name.toLowerCase(),
-                        id: id,
-                        displayName: name
-                    };
+        authService.requireUser().then(function () {
+            templates.get('add-project-data').then(function (template) {
+                let data = {
+                    name: name.toLowerCase(),
+                    id: id,
+                    displayName: name
+                };
 
-                    $(container).html(template(data));
+                $(container).html(template(data));
 
-                    document.title = name;
+                document.title = name;
 
-                    $('#ux-btn-upload-file').click(function () {
-                        let file = $('#file')[0].files[0];
+                $('#ux-btn-upload-file').click(function () {
+                    let file = $('#file')[0].files[0];
 
-                        saveFileContent(id, file);
-                    });
+                    if (!file) {
+                        toastr.error('Не е избран файл!');
+
+                        return;
+                    }
+
+                    saveFileContent(id, file);
                 });
-            } else {
-                window.location.href = '#/auth';
-            }
+            });
         });
     }
 
@@ -205,20 +181,14 @@ let projectController = (function () {
         let reader = new FileReader();
         reader.readAsText(file, 'UTF-8');
         reader.onload = function (e) {
-            projectService.addProjectData(projectID, file.name, e.target.result).then(function (result) {
+            projectService.addProjectData(projectID, file.name, e.target.result).then(function () {
                 toastr.success('Данните бяха добавени успешно!');
 
-                projectService.addProjectDataReference(projectID, result.key, file.name).then(function () {
-                    toastr.success('Проектът беше обновен!');
-
-                    window.location.href = '#/projects';
-                }, function () {
-                    toastr.error('Възникнала е грешка при добавянето на данните!');
-                });
-            }, function () {
-                toastr.error('Възникнала е грешка при добавянето на данните!');
+                window.location.href = '#/projects';
+            }, function (error) {
+                toastr.error(error.message || 'Възникнала е грешка при добавянето на данните!');
             });
-        }
+        };
     }
 
     function createProject() {
@@ -266,26 +236,22 @@ let projectController = (function () {
         }
 
         projectService.createProject(name, year).then(function (project) {
-            addProjectToList('#projects', project.key, name);
+            addProjectToList('#projects', project.id, name);
 
             toastr.success('Обектът беше създаден успешно!');
         }, function (error) {
-            console.log(error);
-            toastr.error('Възникнала е грешка при създаването на обекта!');
+            toastr.error(error.message || 'Възникнала е грешка при създаването на обекта!');
         });
     }
 
     function deleteProject(context) {
         let projectID = context.params.id || null;
 
-        let deleteProjectPromise = projectService.deleteProject(projectID);
-        let deleteProjectDataPromise = projectService.deleteProjectData(projectID);
-
-        Promise.all([deleteProjectPromise, deleteProjectDataPromise]).then(values => {
+        projectService.deleteProject(projectID).then(function () {
             toastr.success('Обектът беше изтрит успешно от базата данни!');
 
             window.location.href = '/#/projects';
-        }, reason => {
+        }, function (error) {
             toastr.error('Възникнала е грешка при изтриването на обекта от базата данни!');
         });
     }

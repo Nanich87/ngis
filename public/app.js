@@ -3,24 +3,26 @@
 (function () {
     let container = '#content';
 
-    firebase.initializeApp({
-        apiKey: "AIzaSyDmtrzJpvAlkb-MH74ghT95bSzm5sq94kE",
-        authDomain: "tg-gis.firebaseapp.com",
-        databaseURL: "https://tg-gis.firebaseio.com",
-        storageBucket: "tg-gis.appspot.com",
-        messagingSenderId: "686997522597"
-    });
-
-    firebase.auth().onAuthStateChanged(function (user) {
+    function updateNavigation(user) {
         if (user) {
-            $('#ux-btn-profile').html('<span class="fa">&#xf007;</span> ' + firebase.auth().currentUser.email).attr('href', '/#/user').removeClass('hidden');
+            $('#ux-btn-profile').html('<span class="fa">&#xf007;</span> ').append(document.createTextNode(user.email)).attr('href', '/#/user').removeClass('hidden');
             $('#ux-btn-auth').html('<span class="fa">&#xf08b;</span> Изход').attr('href', '/#/logout');
         } else {
             $('#ux-btn-profile').html('').attr('href', '#').addClass('hidden');
             $('#ux-btn-auth').html('<span class="fa">&#xf090;</span> Вход').attr('href', '/#/auth');
+        }
+    }
 
+    authService.onAuthStateChanged(updateNavigation);
+
+    authService.getCurrentUser().then(function (user) {
+        updateNavigation(user);
+
+        if (!user) {
             window.location.href = '#/auth';
         }
+    }, function (error) {
+        toastr.error(error.message);
     });
 
     let app = Sammy(container, function () {
@@ -69,9 +71,13 @@
         });
 
         this.get('#/logout', function () {
-            firebase.auth().signOut();
+            let context = this;
 
-            this.redirect('#/auth');
+            authService.signOut().then(function () {
+                context.redirect('#/auth');
+            }, function (error) {
+                toastr.error(error.message);
+            });
         });
 
         this.notFound = function () {
