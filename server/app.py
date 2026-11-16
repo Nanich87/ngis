@@ -5,6 +5,8 @@ Only the Python standard library is used.
     python3 server/app.py [--host 127.0.0.1] [--port 8000]
 """
 import argparse
+import base64
+import binascii
 import json
 import os
 import re
@@ -19,6 +21,7 @@ from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlparse
 
+import cad
 import db
 
 PUBLIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'public'))
@@ -508,6 +511,29 @@ def add_layer(req):
     req.conn.execute('INSERT INTO layers (id, project_id, title, content) VALUES (?, ?, ?, ?)',
                      (lid, req.params['pid'], title, content))
     return HTTPStatus.CREATED, {'id': lid, 'title': title}
+
+
+@route('POST', '/api/projects/:pid/layers/cad')
+def add_cad_layer(req):
+    """CAD file (base64 in "data") -> GeoJSON layer in BGS2005."""
+    req.require_write()
+    get_project_or_404(req, req.params['pid'])
+    title = req.field('title', max_length=MAX_TITLE).strip()
+    if not title:
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Липсва поле: title')
+    try:
+        data = base64.b64decode(req.field('data'), validate=True)
+    except (binascii.Error, ValueError):
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалидна стойност: data')
+    try:
+        geojson, info = cad.convert(data)
+    except cad.CadError as e:
+        raise ApiError(HTTPStatus.BAD_REQUEST, str(e))
+    lid = db.new_id()
+    req.conn.execute('INSERT INTO layers (id, project_id, title, content) VALUES (?, ?, ?, ?)',
+                     (lid, req.params['pid'], title, json.dumps(geojson, ensure_ascii=False, separators=(',', ':'))))
+    return HTTPStatus.CREATED, {'id': lid, 'title': title, 'features': info['features'],
+                                'encoding': info['encoding'], 'warnings': info['warnings']}
 
 
 def get_layer_or_404(req):

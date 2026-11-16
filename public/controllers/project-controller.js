@@ -308,6 +308,30 @@ let projectController = (function () {
         });
     }
 
+    function readFileBase64(file) {
+        return new Promise(function (resolve, reject) {
+            let reader = new FileReader();
+
+            // "data:application/octet-stream;base64,AAAA" -> "AAAA"
+            reader.onload = () => resolve(reader.result.slice(reader.result.indexOf(',') + 1));
+            reader.onerror = () => reject(new Error('Файлът не може да бъде прочетен.'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function isCadFile(file) {
+        return /\.cad$/i.test(file.name);
+    }
+
+    // CAD files are converted on the server (their encoding is usually MIK, which browsers cannot decode).
+    function uploadFile(project, file) {
+        if (isCadFile(file)) {
+            return readFileBase64(file).then(data => projectService.addCadFile(project.id, file.name, data));
+        }
+
+        return readFile(file).then(content => projectService.addProjectData(project.id, file.name, content));
+    }
+
     function uploadFiles(project, files, onDone) {
         if (files.length === 0) {
             return;
@@ -315,6 +339,7 @@ let projectController = (function () {
 
         let status = $('#upload-status').empty();
         let uploaded = 0;
+        let warned = false;
 
         // Upload one at a time to keep request sizes reasonable.
         files.reduce(function (previous, file) {
@@ -325,11 +350,16 @@ let projectController = (function () {
             status.append(item);
 
             return previous.then(function () {
-                return readFile(file).then(function (content) {
-                    return projectService.addProjectData(project.id, file.name, content);
-                }).then(function () {
+                return uploadFile(project, file).then(function (result) {
                     uploaded++;
                     item.find('.spinner-border').replaceWith('<span class="fa text-success" aria-label="Качен">&#xf00c;</span>');
+
+                    if (result && Array.isArray(result.warnings) && result.warnings.length > 0) {
+                        warned = true;
+                        result.warnings.forEach(function (warning) {
+                            item.append($('<div class="text-warning ms-4"></div>').text(warning));
+                        });
+                    }
                 }, function (error) {
                     item.find('.spinner-border').replaceWith('<span class="fa text-danger" aria-label="Грешка">&#xf00d;</span>');
                     item.append($('<span class="text-danger"></span>').text('– ' + error.message));
@@ -340,7 +370,7 @@ let projectController = (function () {
                 toastr.success(pageHelper.formatCount(uploaded, 'файл беше качен', 'файла бяха качени') + '.');
 
                 // Re-render the file list; keep the result rows only if something failed.
-                onDone(uploaded === files.length ? null : status.children().detach());
+                onDone(uploaded === files.length && !warned ? null : status.children().detach());
             }
         });
     }
@@ -573,6 +603,11 @@ let projectController = (function () {
     }
 
     function download(filename, content) {
+        // Converted CAD files are stored as GeoJSON.
+        if (!/\.(geo)?json$/i.test(filename)) {
+            filename = filename.replace(/\.cad$/i, '') + '.geojson';
+        }
+
         let blob = new Blob([content], { type: 'application/geo+json' });
         let url = URL.createObjectURL(blob);
         let link = document.createElement('a');

@@ -41,7 +41,13 @@ let projectService = (function () {
         return api.post(url(id, 'layers'), { title: title, content: content });
     }
 
+    // data: the CAD file as base64; the server converts it to GeoJSON.
+    function addCadFile(id, title, data) {
+        return api.post(url(id, 'layers', 'cad'), { title: title, data: data });
+    }
+
     return {
+        addCadFile: addCadFile,
         createProject: createProject,
         deleteProject: deleteProject,
         getProjects: getProjects,

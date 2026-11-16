@@ -212,6 +212,37 @@ let map = (function () {
             swatch: { shape: 'polygon', stroke: 'red', fill: 'rgba(0, 0, 255, 0.15)', dash: '3 2', width: 2 },
             style: () => new ol.style.Style({ stroke: stroke('red', 3, [4]), fill: fill('rgba(0, 0, 255, 0.1)') })
         },
+        // Cadastral exchange format (CAD) contours, see server/cad.py.
+        'Polygon:cad-territory': {
+            label: 'Землище',
+            swatch: { shape: 'polygon', stroke: '#e040fb', fill: 'none', dash: '6 3', width: 2 },
+            style: () => new ol.style.Style({ stroke: stroke('#e040fb', 3, [12, 6]) })
+        },
+        'Polygon:cad-district': {
+            label: 'Кадастрален район',
+            swatch: { shape: 'polygon', stroke: '#ff9800', fill: 'none', width: 2 },
+            style: () => new ol.style.Style({ stroke: stroke('#ff9800', 2) })
+        },
+        'Polygon:cad-parcel': {
+            label: 'Поземлен имот',
+            swatch: { shape: 'polygon', stroke: '#ffd600', fill: 'rgba(255, 214, 0, 0.15)', width: 1 },
+            style: (f, res) => new ol.style.Style({
+                stroke: stroke('#ffd600', 1),
+                fill: fill('rgba(255, 214, 0, 0.08)'),
+                // Parcel number (last part of the identifier) once zoomed in.
+                text: res < 0.6 ? label(String(f.get('identifier') || '').split('.').pop(), 'black', 'rgba(255, 214, 0, 0.9)', 12, 'normal') : undefined
+            })
+        },
+        'Polygon:cad-building': {
+            label: 'Сграда',
+            swatch: { shape: 'polygon', stroke: '#ff1744', fill: 'rgba(255, 23, 68, 0.35)', width: 1 },
+            style: () => new ol.style.Style({ stroke: stroke('#ff1744', 1), fill: fill('rgba(255, 23, 68, 0.3)') })
+        },
+        'Polygon:cad-contour': {
+            label: 'Кадастрален контур',
+            swatch: { shape: 'polygon', stroke: '#00e5ff', fill: 'rgba(0, 229, 255, 0.15)', width: 1 },
+            style: () => new ol.style.Style({ stroke: stroke('#00e5ff', 1), fill: fill('rgba(0, 229, 255, 0.08)') })
+        },
         'MultiPolygon:default': {
             label: 'Площи',
             swatch: { shape: 'polygon', stroke: 'yellow', fill: 'rgba(255, 255, 0, 0.15)', width: 1 },
@@ -227,6 +258,10 @@ let map = (function () {
             })
         }
     };
+
+    ['cad-territory', 'cad-district', 'cad-parcel', 'cad-building', 'cad-contour'].forEach(function (type) {
+        STYLE_DEFS['MultiPolygon:' + type] = STYLE_DEFS['Polygon:' + type];
+    });
 
     function featureKey(feature) {
         let geometryType = feature.getGeometry() ? feature.getGeometry().getType() : 'GeometryCollection';
@@ -548,7 +583,12 @@ let map = (function () {
         type: 'Тип',
         intersection_number: 'Номер',
         railroad_station: 'Гара',
-        text: 'Текст'
+        text: 'Текст',
+        identifier: 'Идентификатор',
+        area: 'Площ (м²)',
+        date: 'Дата',
+        cad_type: 'Тип на контура',
+        cad_layer: 'Слой'
     };
 
     function escapeHtml(value) {
@@ -619,7 +659,7 @@ let map = (function () {
             }
 
             if (key === 'type' && def) {
-                value = def.label + ' (' + value + ')';
+                value = /^cad-/.test(value) ? def.label : def.label + ' (' + value + ')';
             }
 
             rows += '<tr><th>' + escapeHtml(PROPERTY_LABELS[key] || key) + '</th><td>' + escapeHtml(value) + '</td></tr>';
