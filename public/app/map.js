@@ -93,6 +93,14 @@ let map = (function () {
         });
     }
 
+    // Last part of a CAD identifier: district 00833.502 -> 502, parcel 00833.502.10 -> 10,
+    // building 00833.502.10.1 -> 1.
+    const CAD_NUMBER_RESOLUTION = 0.65;   // parcel and building numbers from zoom 18
+
+    function cadNumber(feature) {
+        return String(feature.get('identifier') || '').split('.').pop();
+    }
+
     // Legend metadata + style for every known "<geometry>:<type>" combination.
     // swatch: { shape: 'point'|'line'|'polygon'|'text', stroke, fill, dash, width, radius }
     const STYLE_DEFS = {
@@ -221,7 +229,11 @@ let map = (function () {
         'Polygon:cad-district': {
             label: 'Кадастрален район',
             swatch: { shape: 'polygon', stroke: '#ff9800', fill: 'none', width: 2 },
-            style: () => new ol.style.Style({ stroke: stroke('#ff9800', 2) })
+            style: (f, res) => new ol.style.Style({
+                stroke: stroke('#ff9800', 2),
+                // District number (e.g. 502) from about zoom 12, until parcel numbers take over.
+                text: res < 40 && res >= CAD_NUMBER_RESOLUTION ? label(cadNumber(f), 'white', '#e65100', 14, 'bold') : undefined
+            })
         },
         'Polygon:cad-parcel': {
             label: 'Поземлен имот',
@@ -230,15 +242,20 @@ let map = (function () {
             style: (f, res) => new ol.style.Style({
                 stroke: stroke('#ffd600', 1),
                 fill: fill('rgba(255, 214, 0, 0.08)'),
-                // Parcel number (last part of the identifier) once zoomed in.
-                text: res < 0.6 ? label(String(f.get('identifier') || '').split('.').pop(), 'black', 'rgba(255, 214, 0, 0.9)', 12, 'normal') : undefined
+                // Parcel number once zoomed in.
+                text: res < CAD_NUMBER_RESOLUTION ? label(cadNumber(f), 'black', 'rgba(255, 214, 0, 0.9)', 12, 'normal') : undefined
             })
         },
         'Polygon:cad-building': {
             label: 'Сграда',
             maxResolution: 1.5,   // ≈ zoom 17
             swatch: { shape: 'polygon', stroke: '#ff1744', fill: 'rgba(255, 23, 68, 0.35)', width: 1 },
-            style: () => new ol.style.Style({ stroke: stroke('#ff1744', 1), fill: fill('rgba(255, 23, 68, 0.3)') })
+            style: (f, res) => new ol.style.Style({
+                stroke: stroke('#ff1744', 1),
+                fill: fill('rgba(255, 23, 68, 0.3)'),
+                // Building number within its parcel; hidden by OpenLayers when it does not fit inside.
+                text: res < CAD_NUMBER_RESOLUTION ? label(cadNumber(f), 'white', '#d50000', 11, 'normal') : undefined
+            })
         },
         'Polygon:cad-contour': {
             label: 'Кадастрален контур',
