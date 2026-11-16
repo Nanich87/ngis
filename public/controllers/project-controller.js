@@ -499,20 +499,22 @@ let projectController = (function () {
     function renderFilePreview(geojson) {
         let preview = map.createPreview('file-preview-map', geojson);
 
-        // Legend / content summary
-        let legend = $('#file-legend').empty();
+        // Legend / content summary; some types appear only when zoomed in.
+        function renderLegend() {
+            let legend = $('#file-legend').empty();
+            let entries = preview.getLegend();
 
-        if (preview.legend.length === 0) {
-            legend.append('<li class="list-group-item text-body-secondary">Файлът няма геообекти.</li>');
+            if (entries.length === 0) {
+                legend.append('<li class="list-group-item text-body-secondary">Файлът няма геообекти.</li>');
+            }
+
+            entries.forEach(function (entry) {
+                legend.append(pageHelper.legendRow(entry, 'list-group-item legend-row'));
+            });
         }
 
-        preview.legend.forEach(function (entry) {
-            legend.append($('<li class="list-group-item legend-row"></li>').append(
-                $('<span class="legend-swatch"></span>').html(entry.swatch),
-                $('<span class="legend-label"></span>').text(entry.label),
-                $('<span class="layer-count"></span>').text(entry.count)
-            ));
-        });
+        renderLegend();
+        preview.onChange(renderLegend);
 
         renderAttributeTable(preview);
     }

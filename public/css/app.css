@@ -281,6 +281,18 @@ body.page-map .footer {
     flex: 1 1 auto;
 }
 
+/* Types not drawn at the current zoom level (CAD parcels and buildings when zoomed out). */
+.legend-hidden .legend-swatch,
+.legend-hidden .legend-label,
+.legend-hidden .layer-count {
+    opacity: .45;
+}
+
+.legend-hint {
+    font-size: .75rem;
+    font-style: italic;
+}
+
 /* ------------------------------------------------------------------ popup */
 
 .ol-popup {

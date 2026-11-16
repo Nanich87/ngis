@@ -311,11 +311,7 @@ let mapController = (function () {
         }
 
         entries.forEach(function (entry) {
-            legend.append($('<li class="legend-row"></li>').append(
-                $('<span class="legend-swatch"></span>').html(entry.swatch),
-                $('<span class="legend-label"></span>').text(entry.label),
-                $('<span class="layer-count"></span>').text(entry.count)
-            ));
+            legend.append(pageHelper.legendRow(entry, 'legend-row'));
         });
     }
 

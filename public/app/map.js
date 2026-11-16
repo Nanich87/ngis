@@ -225,6 +225,7 @@ let map = (function () {
         },
         'Polygon:cad-parcel': {
             label: 'Поземлен имот',
+            maxResolution: 5,     // m/pixel (≈ zoom 15): hidden when zoomed further out
             swatch: { shape: 'polygon', stroke: '#ffd600', fill: 'rgba(255, 214, 0, 0.15)', width: 1 },
             style: (f, res) => new ol.style.Style({
                 stroke: stroke('#ffd600', 1),
@@ -235,6 +236,7 @@ let map = (function () {
         },
         'Polygon:cad-building': {
             label: 'Сграда',
+            maxResolution: 1.5,   // ≈ zoom 17
             swatch: { shape: 'polygon', stroke: '#ff1744', fill: 'rgba(255, 23, 68, 0.35)', width: 1 },
             style: () => new ol.style.Style({ stroke: stroke('#ff1744', 1), fill: fill('rgba(255, 23, 68, 0.3)') })
         },
@@ -272,10 +274,15 @@ let map = (function () {
         return STYLE_DEFS[key] ? key : geometryType + ':default';
     }
 
+    // Types with maxResolution are not drawn (nor clickable) when zoomed out further.
+    function hiddenAt(def, resolution) {
+        return Boolean(def.maxResolution && resolution > def.maxResolution);
+    }
+
     function styleFunction(feature, resolution) {
         let def = STYLE_DEFS[featureKey(feature)] || STYLE_DEFS['GeometryCollection:default'];
 
-        return def.style(feature, resolution);
+        return hiddenAt(def, resolution) ? null : def.style(feature, resolution);
     }
 
     // ------------------------------------------------------------------ map state
@@ -308,6 +315,9 @@ let map = (function () {
 
         setBaseMap(options.baseMap || 'osm');
         initPopup();
+
+        // Some types appear only when zoomed in, so the legend depends on the zoom level.
+        olMap.on('moveend', notifyChange);
     }
 
     function setBaseMap(id) {
@@ -530,10 +540,11 @@ let map = (function () {
 
     // Entries for the feature types present in the visible data layers.
     function getLegend() {
-        return legendFor(Object.keys(dataLayers).map(id => dataLayers[id]));
+        return legendFor(Object.keys(dataLayers).map(id => dataLayers[id]), olMap.getView().getResolution());
     }
 
-    function legendFor(layers) {
+    // hidden: the type is not drawn at this resolution (zoom in to see it).
+    function legendFor(layers, resolution) {
         let counts = {};
 
         layers.forEach(function (layer) {
@@ -550,7 +561,13 @@ let map = (function () {
         return Object.keys(counts).map(function (key) {
             let def = STYLE_DEFS[key] || STYLE_DEFS['GeometryCollection:default'];
 
-            return { key: key, label: def.label, count: counts[key], swatch: swatchSvg(def.swatch) };
+            return {
+                key: key,
+                label: def.label,
+                count: counts[key],
+                swatch: swatchSvg(def.swatch),
+                hidden: hiddenAt(def, resolution)
+            };
         });
     }
 
@@ -700,7 +717,8 @@ let map = (function () {
 
         return {
             features: features,
-            legend: legendFor([layer]),
+            getLegend: () => legendFor([layer], preview.getView().getResolution()),
+            onChange: listener => preview.on('moveend', listener),
             zoomToFeature: function (feature) {
                 if (feature.getGeometry()) {
                     fit(feature.getGeometry().getExtent());
