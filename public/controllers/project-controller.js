@@ -319,14 +319,15 @@ let projectController = (function () {
         });
     }
 
-    function isCadFile(file) {
-        return /\.cad$/i.test(file.name);
-    }
-
-    // CAD files are converted on the server (their encoding is usually MIK, which browsers cannot decode).
+    // CAD and GPX files are converted to GeoJSON on the server (CAD files are usually in MIK,
+    // which browsers cannot decode; GPX files declare their encoding in the XML header).
     function uploadFile(project, file) {
-        if (isCadFile(file)) {
+        if (/\.cad$/i.test(file.name)) {
             return readFileBase64(file).then(data => projectService.addCadFile(project.id, file.name, data));
+        }
+
+        if (/\.gpx$/i.test(file.name)) {
+            return readFileBase64(file).then(data => projectService.addGpxFile(project.id, file.name, data));
         }
 
         return readFile(file).then(content => projectService.addProjectData(project.id, file.name, content));
@@ -605,9 +606,9 @@ let projectController = (function () {
     }
 
     function download(filename, content) {
-        // Converted CAD files are stored as GeoJSON.
+        // Converted CAD and GPX files are stored as GeoJSON.
         if (!/\.(geo)?json$/i.test(filename)) {
-            filename = filename.replace(/\.cad$/i, '') + '.geojson';
+            filename = filename.replace(/\.(cad|gpx)$/i, '') + '.geojson';
         }
 
         let blob = new Blob([content], { type: 'application/geo+json' });

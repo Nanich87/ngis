@@ -101,6 +101,8 @@ let map = (function () {
         return String(feature.get('identifier') || '').split('.').pop();
     }
 
+    const GPX_NAME_RESOLUTION = 10;       // GPX waypoint names from about zoom 14
+
     // Legend metadata + style for every known "<geometry>:<type>" combination.
     // swatch: { shape: 'point'|'line'|'polygon'|'text', stroke, fill, dash, width, radius }
     const STYLE_DEFS = {
@@ -262,6 +264,28 @@ let map = (function () {
             swatch: { shape: 'polygon', stroke: '#00e5ff', fill: 'rgba(0, 229, 255, 0.15)', width: 1 },
             style: () => new ol.style.Style({ stroke: stroke('#00e5ff', 1), fill: fill('rgba(0, 229, 255, 0.08)') })
         },
+        // GPX files, see server/gpx.py.
+        'Point:gpx-waypoint': {
+            label: 'GPS точка',
+            swatch: { shape: 'point', stroke: '#6a1b9a', fill: '#ce93d8', radius: 5, width: 2 },
+            style: (f, res) => new ol.style.Style({
+                image: circle(5, '#6a1b9a', 2, '#ce93d8'),
+                text: res < GPX_NAME_RESOLUTION ? label(f.get('name'), '#4a148c', 'white', 12, 'bold', 0, -14) : undefined
+            })
+        },
+        'LineString:gpx-route': {
+            label: 'GPS маршрут',
+            swatch: { shape: 'line', stroke: '#2962ff', width: 3, dash: '8 4' },
+            style: () => new ol.style.Style({ stroke: stroke('#2962ff', 3, [12, 6]) })
+        },
+        'LineString:gpx-track': {
+            label: 'GPS трасе',
+            swatch: { shape: 'line', stroke: '#d500f9', width: 3 },
+            style: () => [
+                new ol.style.Style({ stroke: stroke('white', 5) }),
+                new ol.style.Style({ stroke: stroke('#d500f9', 3) })
+            ]
+        },
         'MultiPolygon:default': {
             label: 'Площи',
             swatch: { shape: 'polygon', stroke: 'yellow', fill: 'rgba(255, 255, 0, 0.15)', width: 1 },
@@ -277,6 +301,8 @@ let map = (function () {
             })
         }
     };
+
+    STYLE_DEFS['MultiLineString:gpx-track'] = STYLE_DEFS['LineString:gpx-track'];
 
     ['cad-territory', 'cad-district', 'cad-parcel', 'cad-building', 'cad-contour'].forEach(function (type) {
         STYLE_DEFS['MultiPolygon:' + type] = STYLE_DEFS['Polygon:' + type];

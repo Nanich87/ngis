@@ -46,8 +46,14 @@ let projectService = (function () {
         return api.post(url(id, 'layers', 'cad'), { title: title, data: data });
     }
 
+    // data: the GPX file as base64; the server converts it to GeoJSON.
+    function addGpxFile(id, title, data) {
+        return api.post(url(id, 'layers', 'gpx'), { title: title, data: data });
+    }
+
     return {
         addCadFile: addCadFile,
+        addGpxFile: addGpxFile,
         createProject: createProject,
         deleteProject: deleteProject,
         getProjects: getProjects,

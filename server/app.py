@@ -22,6 +22,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlparse
 
 import cad
+import gpx
 import db
 
 PUBLIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'public'))
@@ -513,9 +514,8 @@ def add_layer(req):
     return HTTPStatus.CREATED, {'id': lid, 'title': title}
 
 
-@route('POST', '/api/projects/:pid/layers/cad')
-def add_cad_layer(req):
-    """CAD file (base64 in "data") -> GeoJSON layer in BGS2005."""
+def add_converted_layer(req, converter, error_class):
+    """File in base64 ("data") -> converted to GeoJSON by converter(bytes) and stored as a layer."""
     req.require_write()
     get_project_or_404(req, req.params['pid'])
     title = req.field('title', max_length=MAX_TITLE).strip()
@@ -526,14 +526,25 @@ def add_cad_layer(req):
     except (binascii.Error, ValueError):
         raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалидна стойност: data')
     try:
-        geojson, info = cad.convert(data)
-    except cad.CadError as e:
+        geojson, info = converter(data)
+    except error_class as e:
         raise ApiError(HTTPStatus.BAD_REQUEST, str(e))
     lid = db.new_id()
     req.conn.execute('INSERT INTO layers (id, project_id, title, content) VALUES (?, ?, ?, ?)',
                      (lid, req.params['pid'], title, json.dumps(geojson, ensure_ascii=False, separators=(',', ':'))))
-    return HTTPStatus.CREATED, {'id': lid, 'title': title, 'features': info['features'],
-                                'encoding': info['encoding'], 'warnings': info['warnings']}
+    return HTTPStatus.CREATED, dict(info, id=lid, title=title)
+
+
+@route('POST', '/api/projects/:pid/layers/cad')
+def add_cad_layer(req):
+    """CAD file -> GeoJSON layer in BGS2005."""
+    return add_converted_layer(req, cad.convert, cad.CadError)
+
+
+@route('POST', '/api/projects/:pid/layers/gpx')
+def add_gpx_layer(req):
+    """GPX file -> GeoJSON layer in WGS84."""
+    return add_converted_layer(req, gpx.convert, gpx.GpxError)
 
 
 def get_layer_or_404(req):
