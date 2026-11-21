@@ -179,7 +179,8 @@ def convert(data):
         waypoints.append(_feature({'type': 'Point', 'coordinates': coords}, props))
 
     if reader.skipped:
-        warnings.append('Пропуснати са {} точки с липсващи или невалидни координати.'.format(reader.skipped))
+        warnings.append('Пропусната е 1 точка с липсващи или невалидни координати.' if reader.skipped == 1 else
+                        'Пропуснати са {} точки с липсващи или невалидни координати.'.format(reader.skipped))
 
     # Drawing order: tracks, routes, then waypoints on top.
     features = tracks + routes + waypoints
