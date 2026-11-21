@@ -11,6 +11,10 @@ let projectService = (function () {
     }
 
     // Also deletes all of the project's files (ON DELETE CASCADE).
+    function renameProject(id, name) {
+        return api.patch(url(id), { name: name });
+    }
+
     function deleteProject(id) {
         return api.delete(url(id));
     }
@@ -56,6 +60,7 @@ let projectService = (function () {
         addGpxFile: addGpxFile,
         createProject: createProject,
         deleteProject: deleteProject,
+        renameProject: renameProject,
         getProjects: getProjects,
         getProjectById: getProjectById,
         getProjectData: getProjectData,

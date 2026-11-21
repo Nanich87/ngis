@@ -39,6 +39,7 @@ let projectController = (function () {
 
                 if (user.isAdmin) {
                     initCreateProjectModal();
+                    initRenameProjectModal();
                 }
 
                 projectService.getProjects().then(function (projects) {
@@ -53,6 +54,10 @@ let projectController = (function () {
 
     function renderProjects(projects, user) {
         let tbody = $('#projects tbody').empty();
+
+        // Newest year first (years are always 4 digits); within a year, the most recently created first.
+        projects = projects.slice().sort((a, b) =>
+            String(b.year).localeCompare(String(a.year)) || String(b.created_at).localeCompare(String(a.created_at)));
 
         projects.forEach(project => tbody.append(projectRow(project, user)));
 
@@ -74,6 +79,14 @@ let projectController = (function () {
         );
 
         if (user.isAdmin) {
+            let rename = $('<button type="button" class="btn btn-sm btn-neutral"><span class="fa">&#xf040;</span></button>')
+                .attr('aria-label', 'Преименуване на ' + project.name)
+                .attr('title', 'Преименуване');
+
+            rename.on('click', () => openRenameModal(project, row, user));
+
+            actions.append(rename);
+
             let remove = $('<button type="button" class="btn btn-sm btn-outline-danger"><span class="fa">&#xf1f8;</span></button>')
                 .attr('aria-label', 'Изтриване на ' + project.name)
                 .attr('title', 'Изтриване');
@@ -155,14 +168,87 @@ let projectController = (function () {
         return !!message;
     }
 
+    function projectNameError(name) {
+        return name.length < 3 ? 'Името трябва да е поне 3 символа.'
+            : name.length > 20 ? 'Името може да е най-много 20 символа.'
+                : !NAME_PATTERN.test(name) ? 'Разрешени са само латински букви, цифри и тире.'
+                    : null;
+    }
+
+    // The modal is shared by all rows; renaming is the current target.
+    let renaming = null;
+
+    function initRenameProjectModal() {
+        let modal = $('#rename-project-modal');
+
+        modal.on('shown.bs.modal', function () {
+            $('#rename-name').trigger('focus').trigger('select');
+        });
+
+        modal.on('hidden.bs.modal', function () {
+            renaming = null;
+        });
+
+        $('#rename-project-form').on('submit', function () {
+            renameProject();
+
+            return false;
+        });
+    }
+
+    function openRenameModal(project, row, user) {
+        renaming = { project: project, row: row, user: user };
+
+        fieldError('#rename-name', null);
+        $('#rename-name').val(project.name);
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('rename-project-modal')).show();
+    }
+
+    function renameProject() {
+        if (renaming === null) {
+            return;
+        }
+
+        let target = renaming;
+        let name = $('#rename-name').val().trim();
+
+        if (fieldError('#rename-name', projectNameError(name))) {
+            $('#rename-name').trigger('focus');
+
+            return;
+        }
+
+        if (name === target.project.name) {
+            bootstrap.Modal.getInstance(document.getElementById('rename-project-modal')).hide();
+
+            return;
+        }
+
+        let button = $('#ux-btn-rename-project').prop('disabled', true);
+
+        projectService.renameProject(target.project.id, name).then(function () {
+            toastr.success('Обектът беше преименуван.');
+
+            let project = Object.assign({}, target.project, { name: name });
+            let row = projectRow(project, target.user);
+
+            target.row.replaceWith(row);
+            filterProjects($('#project-search').val() || '');
+
+            bootstrap.Modal.getInstance(document.getElementById('rename-project-modal')).hide();
+        }, function (error) {
+            toastr.error(error.message);
+        }).then(function () {
+            button.prop('disabled', false);
+        });
+    }
+
     function createProject() {
         let name = $('#name').val().trim();
         let year = $('#year').val().trim();
 
-        let nameError = name.length < 3 ? 'Името трябва да е поне 3 символа.'
-            : name.length > 20 ? 'Името може да е най-много 20 символа.'
-                : !NAME_PATTERN.test(name) ? 'Разрешени са само латински букви, цифри и тире.'
-                    : null;
+        let nameError = projectNameError(name);
         let yearError = !YEAR_PATTERN.test(year) ? 'Въведете година между 1900 и 2099.' : null;
 
         let invalid = fieldError('#name', nameError);

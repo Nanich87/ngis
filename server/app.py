@@ -477,6 +477,17 @@ def get_project(req):
     return HTTPStatus.OK, result
 
 
+@route('PATCH', '/api/projects/:pid')
+def rename_project(req):
+    req.require_admin()
+    project = get_project_or_404(req, req.params['pid'])
+    name = req.field('name').strip()
+    if not PROJECT_NAME_RE.fullmatch(name):
+        raise ApiError(HTTPStatus.BAD_REQUEST, 'Невалидно име на обект!')
+    req.conn.execute('UPDATE projects SET name = ? WHERE id = ?', (name, project['id']))
+    return HTTPStatus.OK, {'id': project['id'], 'name': name, 'year': project['year']}
+
+
 @route('DELETE', '/api/projects/:pid')
 def delete_project(req):
     req.require_admin()

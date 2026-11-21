@@ -42,6 +42,7 @@ PROTECTED = [
     ('GET', '/api/projects'),
     ('POST', '/api/projects'),
     ('GET', '/api/projects/p-alpha'),
+    ('PATCH', '/api/projects/p-alpha'),
     ('DELETE', '/api/projects/p-alpha'),
     ('GET', '/api/projects/p-alpha/layers'),
     ('POST', '/api/projects/p-alpha/layers'),
@@ -116,6 +117,9 @@ class SqlInjectionTests(ServerTestCase):
                 self.assertNotServerError(r)
                 self.assertEqual(r.status, 400)
                 r = admin.post('/api/projects', {'name': 'Valid-name', 'year': payload})
+                self.assertNotServerError(r)
+                self.assertEqual(r.status, 400)
+                r = admin.patch('/api/projects/p-alpha', {'name': payload})
                 self.assertNotServerError(r)
                 self.assertEqual(r.status, 400)
         self.assertDatabaseIntact()
@@ -315,6 +319,7 @@ class AuthorizationTests(ServerTestCase):
         ('GET', '/api/projects/p-alpha/layers/l-alpha', 'read'),
         ('POST', '/api/projects/p-beta/layers', 'write'),
         ('POST', '/api/projects', 'admin'),
+        ('PATCH', '/api/projects/p-beta', 'admin'),
         ('GET', '/api/admin/users', 'admin'),
         ('PATCH', '/api/admin/users/u-nobody', 'admin'),
     ]
@@ -323,6 +328,7 @@ class AuthorizationTests(ServerTestCase):
     BODIES = {
         '/api/projects/p-beta/layers': {'title': 'authz.geojson', 'content': SAMPLE_GEOJSON},
         '/api/projects': {'name': 'Authz-test', 'year': '2024'},
+        '/api/projects/p-beta': {'name': 'Authz-renamed'},
         '/api/admin/users/u-nobody': {'canRead': False},
     }
 
@@ -336,6 +342,21 @@ class AuthorizationTests(ServerTestCase):
                         self.assertIn(r.status, (200, 201), r.text)
                     else:
                         self.assertEqual(r.status, 403, r.text)
+
+    def test_rename_project(self):
+        admin = self.client('admin@test.bg')
+        r = admin.patch('/api/projects/p-alpha', {'name': '  Alpha-2  '})
+        self.assertEqual(r.status, 200, r.text)
+        self.assertEqual(r.json, {'id': 'p-alpha', 'name': 'Alpha-2', 'year': '2020'})
+        project = admin.get('/api/projects/p-alpha').json
+        self.assertEqual((project['name'], project['year']), ('Alpha-2', '2020'))
+        self.assertEqual(len(project['layers']), 1)          # files stay with the project
+        self.assertEqual(admin.patch('/api/projects/missing', {'name': 'Valid-name'}).status, 404)
+        for body in ({}, {'name': ''}, {'name': 'ab'}, {'name': 'x' * 21}, {'name': 'с кирилица'}, {'name': 5}):
+            with self.subTest(body=body):
+                self.assertEqual(admin.patch('/api/projects/p-alpha', body).status, 400)
+        self.assertEqual(admin.get('/api/projects/p-alpha').json['name'], 'Alpha-2')
+        self.assertEqual(self.client('writer@test.bg').patch('/api/projects/p-alpha', {'name': 'Writer'}).status, 403)
 
     def test_destructive_endpoints_by_lower_roles(self):
         for email in ['nobody@test.bg', 'reader@test.bg']:

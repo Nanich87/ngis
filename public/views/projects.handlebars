@@ -71,5 +71,26 @@
         </form>
     </div>
 </div>
+
+<div class="modal fade" id="rename-project-modal" tabindex="-1" aria-labelledby="rename-project-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="rename-project-form" novalidate>
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="rename-project-title">Преименуване на обект</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Затваряне"></button>
+            </div>
+            <div class="modal-body">
+                <label for="rename-name" class="form-label">Ново име</label>
+                <input class="form-control" id="rename-name" type="text" maxlength="20" autocomplete="off" required aria-describedby="rename-name-help" />
+                <div class="invalid-feedback" id="rename-name-error"></div>
+                <div class="form-text" id="rename-name-help">3–20 символа: латински букви, цифри и тире.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отказ</button>
+                <button type="submit" class="btn btn-primary" id="ux-btn-rename-project">Запис</button>
+            </div>
+        </form>
+    </div>
+</div>
 {{/if}}
 {{/if}}
