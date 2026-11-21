@@ -45,7 +45,7 @@ let userController = (function () {
                 renderAvatar($('#profile-avatar'), user);
 
                 $('#ux-btn-copy-uid').on('click', function () {
-                    pageHelper.copyText(user.uid, 'ID е копиран.');
+                    pageHelper.copyText(user.uid, i18n.t('ID е копиран.'));
                 });
 
                 // Returning false keeps the browser from submitting (and reloading) the page.
@@ -83,9 +83,9 @@ let userController = (function () {
             $('#titleName').text(user.displayName || user.email);
             renderAvatar($('#profile-avatar'), user);
 
-            toastr.success('Данните бяха записани.');
+            toastr.success(i18n.t('Данните бяха записани.'));
         }, function (error) {
-            toastr.error(error.message || 'Възникнала е грешка при записването на данните!');
+            toastr.error(error.message || i18n.t('Възникнала е грешка при записването на данните!'));
         }).then(function () {
             button.prop('disabled', false);
         });
@@ -103,10 +103,10 @@ let userController = (function () {
         let next = $('#new-password').val();
         let repeat = $('#new-password-repeat').val();
 
-        let invalid = fieldError('#current-password', current ? null : 'Въведете текущата парола.');
-        invalid = fieldError('#new-password', next.length < 10 ? 'Паролата трябва да е поне 10 символа.'
-            : next === current ? 'Новата парола съвпада с текущата.' : null) || invalid;
-        invalid = fieldError('#new-password-repeat', repeat !== next ? 'Паролите не съвпадат.' : null) || invalid;
+        let invalid = fieldError('#current-password', current ? null : i18n.t('Въведете текущата парола.'));
+        invalid = fieldError('#new-password', next.length < 10 ? i18n.t('Паролата трябва да е поне 10 символа.')
+            : next === current ? i18n.t('Новата парола съвпада с текущата.') : null) || invalid;
+        invalid = fieldError('#new-password-repeat', repeat !== next ? i18n.t('Паролите не съвпадат.') : null) || invalid;
 
         if (invalid) {
             $('#password-form .is-invalid').first().trigger('focus');
@@ -118,9 +118,9 @@ let userController = (function () {
 
         authService.changePassword(current, next).then(function () {
             $('#password-form')[0].reset();
-            toastr.success('Паролата беше сменена.');
+            toastr.success(i18n.t('Паролата беше сменена.'));
         }, function (error) {
-            if (error.status === 400 && /текущата/i.test(error.message)) {
+            if (error.status === 400 && error.field === 'currentPassword') {
                 fieldError('#current-password', error.message);
                 $('#current-password').trigger('focus');
             } else {

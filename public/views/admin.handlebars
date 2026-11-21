@@ -1,42 +1,42 @@
 <div class="page-header">
     <div>
-        <h1 class="page-title">Потребители</h1>
+        <h1 class="page-title">{{t "Потребители"}}</h1>
         <p class="page-subtitle" id="users-summary">&nbsp;</p>
     </div>
     <div class="page-actions">
-        <input id="user-search" type="search" class="form-control" placeholder="Търсене по email, име или ID…" aria-label="Търсене на потребител" />
-        <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#create-user-modal"><span class="fa">&#xf234;</span> Нов потребител</button>
+        <input id="user-search" type="search" class="form-control" placeholder="{{t "Търсене по email, име или ID…"}}" aria-label="{{t "Търсене на потребител"}}" />
+        <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#create-user-modal"><span class="fa">&#xf234;</span> {{t "Нов потребител"}}</button>
     </div>
 </div>
 
 <div class="card">
     <div class="loading-indicator text-center text-body-secondary py-5">
-        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Зареждане…
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>{{t "Зареждане…"}}
     </div>
     <div class="table-responsive">
         <table id="users" class="table table-hover align-middle mb-0 hidden">
             <thead>
                 <tr>
-                    <th>Потребител</th>
-                    <th class="text-nowrap">Създаден</th>
-                    <th class="text-center">Четене</th>
-                    <th class="text-center">Запис</th>
-                    <th class="text-center">Админ</th>
-                    <th class="text-end"><span class="visually-hidden">Действия</span></th>
+                    <th>{{t "Потребител"}}</th>
+                    <th class="text-nowrap">{{t "Създаден"}}</th>
+                    <th class="text-center">{{t "Четене"}}</th>
+                    <th class="text-center">{{t "право|Запис"}}</th>
+                    <th class="text-center">{{t "Админ"}}</th>
+                    <th class="text-end"><span class="visually-hidden">{{t "Действия"}}</span></th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
 </div>
-<p class="small text-body-secondary mt-3 mb-0">Промените в правата се записват веднага. „Админ“ дава пълен достъп, включително създаване и изтриване на обекти и управление на потребителите.</p>
+<p class="small text-body-secondary mt-3 mb-0">{{t "Промените в правата се записват веднага. „Админ“ дава пълен достъп, включително създаване и изтриване на обекти и управление на потребителите."}}</p>
 
 <div class="modal fade" id="create-user-modal" tabindex="-1" aria-labelledby="create-user-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" id="create-user-form" novalidate>
             <div class="modal-header">
-                <h2 class="modal-title fs-5" id="create-user-title">Нов потребител</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Затваряне"></button>
+                <h2 class="modal-title fs-5" id="create-user-title">{{t "Нов потребител"}}</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t "Затваряне"}}"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
@@ -45,29 +45,29 @@
                     <div class="invalid-feedback" id="new-user-email-error"></div>
                 </div>
                 <div class="mb-3">
-                    <label for="new-user-name" class="form-label">Име <span class="text-body-secondary">(по избор)</span></label>
+                    <label for="new-user-name" class="form-label">{{t "Име"}} <span class="text-body-secondary">{{t "(по избор)"}}</span></label>
                     <input class="form-control" id="new-user-name" type="text" maxlength="100" autocomplete="off" />
                 </div>
                 <fieldset>
-                    <legend class="form-label fs-6 mb-2">Права</legend>
+                    <legend class="form-label fs-6 mb-2">{{t "Права"}}</legend>
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="new-user-read" checked />
-                        <label class="form-check-label" for="new-user-read">Четене</label>
+                        <label class="form-check-label" for="new-user-read">{{t "Четене"}}</label>
                     </div>
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="new-user-write" />
-                        <label class="form-check-label" for="new-user-write">Запис</label>
+                        <label class="form-check-label" for="new-user-write">{{t "право|Запис"}}</label>
                     </div>
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="new-user-admin" />
-                        <label class="form-check-label" for="new-user-admin">Админ</label>
+                        <label class="form-check-label" for="new-user-admin">{{t "Админ"}}</label>
                     </div>
                 </fieldset>
-                <p class="form-text mb-0 mt-3">Ще бъде генерирана временна парола, която да предадете на потребителя. Той може да я смени от профила си.</p>
+                <p class="form-text mb-0 mt-3">{{t "Ще бъде генерирана временна парола, която да предадете на потребителя. Той може да я смени от профила си."}}</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отказ</button>
-                <button type="submit" class="btn btn-primary" id="ux-btn-create-user">Създаване</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{t "Отказ"}}</button>
+                <button type="submit" class="btn btn-primary" id="ux-btn-create-user">{{t "Създаване"}}</button>
             </div>
         </form>
     </div>
@@ -77,18 +77,18 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title fs-5" id="password-modal-title">Временна парола</h2>
+                <h2 class="modal-title fs-5" id="password-modal-title">{{t "Временна парола"}}</h2>
             </div>
             <div class="modal-body">
-                <p>Паролата за <strong id="password-modal-email"></strong> е:</p>
+                <p>{{t "Паролата за"}} <strong id="password-modal-email"></strong> {{t "е:"}}</p>
                 <div class="d-flex gap-2 align-items-center mb-3">
-                    <input class="form-control font-monospace" id="password-modal-value" type="text" readonly aria-label="Временна парола" />
-                    <button type="button" class="btn btn-neutral text-nowrap" id="ux-btn-copy-password"><span class="fa">&#xf0c5;</span> Копиране</button>
+                    <input class="form-control font-monospace" id="password-modal-value" type="text" readonly aria-label="{{t "Временна парола"}}" />
+                    <button type="button" class="btn btn-neutral text-nowrap" id="ux-btn-copy-password"><span class="fa">&#xf0c5;</span> {{t "Копиране"}}</button>
                 </div>
-                <div class="alert alert-warning small mb-0">Паролата се показва само сега. Предайте я на потребителя по сигурен канал и го помолете да я смени от профила си.</div>
+                <div class="alert alert-warning small mb-0">{{t "Паролата се показва само сега. Предайте я на потребителя по сигурен канал и го помолете да я смени от профила си."}}</div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Готово</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">{{t "Готово"}}</button>
             </div>
         </div>
     </div>

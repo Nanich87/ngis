@@ -15,6 +15,8 @@ import math
 import xml.etree.ElementTree as ET
 from xml.parsers import expat
 
+from i18n import _
+
 MAX_POINTS = 5_000_000          # guards memory use on huge or malicious files
 EARTH_RADIUS = 6_371_008.8      # m, mean radius
 
@@ -24,7 +26,7 @@ WAYPOINT_FIELDS = TEXT_FIELDS + (('sym', 'sym'), ('time', 'time'))
 
 
 class GpxError(ValueError):
-    """The file cannot be converted; the message is shown to the user (in Bulgarian)."""
+    """The file cannot be converted; the message (an i18n Message) is shown to the user."""
 
 
 def _local(tag):
@@ -53,11 +55,11 @@ def _number(value):
 
 def _parse_xml(data):
     if not data.strip():
-        raise GpxError('Файлът е празен.')
+        raise GpxError(_('Файлът е празен.'))
     # No DTDs: rules out entity expansion ("billion laughs") and external entities. The C
     # ElementTree parser does not expose expat's handlers, so a plain expat pass checks first.
     def reject_dtd(*args):
-        raise GpxError('GPX файлът съдържа DOCTYPE декларация, която не се поддържа.')
+        raise GpxError(_('GPX файлът съдържа DOCTYPE декларация, която не се поддържа.'))
 
     try:
         check = expat.ParserCreate()
@@ -68,11 +70,11 @@ def _parse_xml(data):
     except GpxError:
         raise
     except (expat.ExpatError, ET.ParseError) as e:
-        raise GpxError('Файлът не е валиден XML ({}).'.format(e))
+        raise GpxError(_('Файлът не е валиден XML ({error}).', error=str(e)))
     except (ValueError, LookupError):
-        raise GpxError('Файлът не е валиден XML.')
+        raise GpxError(_('Файлът не е валиден XML.'))
     if _local(root.tag) != 'gpx':
-        raise GpxError('Файлът не е GPX (основният елемент трябва да е <gpx>).')
+        raise GpxError(_('Файлът не е GPX (основният елемент трябва да е <gpx>).'))
     return root
 
 
@@ -91,7 +93,7 @@ class _Reader:
             return None
         self.points += 1
         if self.points > MAX_POINTS:
-            raise GpxError('Файлът има повече от {} точки.'.format(MAX_POINTS))
+            raise GpxError(_('Файлът има повече от {max} точки.', max=MAX_POINTS))
         ele = _number(_text(element, 'ele'))
         return [lon, lat] if ele is None else [lon, lat, ele]
 
@@ -150,7 +152,7 @@ def convert(data):
                 elements.extend(points)
         props = _properties(trk, 'gpx-track', TEXT_FIELDS)
         if not segments:
-            warnings.append('Трасето „{}“ няма сегмент с поне 2 точки и е пропуснато.'.format(props.get('name', '')))
+            warnings.append(_('Трасето „{name}“ няма сегмент с поне 2 точки и е пропуснато.', name=props.get('name', '')))
             continue
         props['length'] = _length(segments)
         start, end = _times(elements)
@@ -164,7 +166,7 @@ def convert(data):
         coords = reader.line(_children(rte, 'rtept'))
         props = _properties(rte, 'gpx-route', TEXT_FIELDS)
         if len(coords) < 2:
-            warnings.append('Маршрутът „{}“ има по-малко от 2 точки и е пропуснат.'.format(props.get('name', '')))
+            warnings.append(_('Маршрутът „{name}“ има по-малко от 2 точки и е пропуснат.', name=props.get('name', '')))
             continue
         props['length'] = _length([coords])
         routes.append(_feature({'type': 'LineString', 'coordinates': coords}, props))
@@ -179,12 +181,12 @@ def convert(data):
         waypoints.append(_feature({'type': 'Point', 'coordinates': coords}, props))
 
     if reader.skipped:
-        warnings.append('Пропусната е 1 точка с липсващи или невалидни координати.' if reader.skipped == 1 else
-                        'Пропуснати са {} точки с липсващи или невалидни координати.'.format(reader.skipped))
+        warnings.append(_('Пропусната е 1 точка с липсващи или невалидни координати.') if reader.skipped == 1 else
+                        _('Пропуснати са {count} точки с липсващи или невалидни координати.', count=reader.skipped))
 
     # Drawing order: tracks, routes, then waypoints on top.
     features = tracks + routes + waypoints
     if not features:
-        raise GpxError('Файлът не съдържа точки, маршрути или трасета.')
+        raise GpxError(_('Файлът не съдържа точки, маршрути или трасета.'))
 
     return {'type': 'FeatureCollection', 'features': features}, {'features': len(features), 'warnings': warnings}

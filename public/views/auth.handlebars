@@ -1,8 +1,8 @@
 <div class="auth-wrapper">
     <div class="card auth-card">
         <div class="card-body p-4">
-            <h1 class="h3 mb-1">Вход</h1>
-            <p class="text-body-secondary mb-4">Влезте в nGIS с вашия email и парола.</p>
+            <h1 class="h3 mb-1">{{t "Вход"}}</h1>
+            <p class="text-body-secondary mb-4">{{t "Влезте в nGIS с вашия email и парола."}}</p>
 
             <form id="ux-form-auth" novalidate>
                 <div class="mb-3">
@@ -10,14 +10,14 @@
                     <input class="form-control" id="email" type="email" autocomplete="email" required autofocus />
                 </div>
                 <div class="mb-3">
-                    <label for="password" class="form-label">Парола</label>
+                    <label for="password" class="form-label">{{t "Парола"}}</label>
                     <input class="form-control" id="password" type="password" autocomplete="current-password" required />
                 </div>
-                <button type="submit" class="btn btn-primary w-100" id="ux-btn-submit">Вход</button>
+                <button type="submit" class="btn btn-primary w-100" id="ux-btn-submit">{{t "Вход"}}</button>
             </form>
 
             <p class="text-center text-body-secondary small mt-4 mb-0">
-                Нямате акаунт или сте забравили паролата си? Обърнете се към администратора.
+                {{t "Нямате акаунт или сте забравили паролата си? Обърнете се към администратора."}}
             </p>
         </div>
     </div>

@@ -1,33 +1,33 @@
 {{#if notAuthorized}}
 <div class="alert alert-warning">
-    <strong>Нямате достъп.</strong> Нямате права за четене на обекти. Обърнете се към администратор и му предоставете своя ID от страницата <a href="/#/user" class="alert-link">Профил</a>.
+    <strong>{{t "Нямате достъп."}}</strong> {{t "Нямате права за четене на обекти. Обърнете се към администратор и му предоставете своя ID от страницата"}} <a href="/#/user" class="alert-link">{{t "Профил"}}</a>.
 </div>
 {{else}}
 <div class="page-header">
     <div>
-        <h1 class="page-title">Обекти</h1>
+        <h1 class="page-title">{{t "Обекти"}}</h1>
         <p class="page-subtitle" id="projects-summary">&nbsp;</p>
     </div>
     <div class="page-actions">
-        <input id="project-search" type="search" class="form-control" placeholder="Търсене по име или година…" aria-label="Търсене на обект" />
+        <input id="project-search" type="search" class="form-control" placeholder="{{t "Търсене по име или година…"}}" aria-label="{{t "Търсене на обект"}}" />
         {{#if isAdmin}}
-        <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#create-project-modal"><span class="fa">&#xf067;</span> Нов обект</button>
+        <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#create-project-modal"><span class="fa">&#xf067;</span> {{t "Нов обект"}}</button>
         {{/if}}
     </div>
 </div>
 
 <div class="card">
     <div class="loading-indicator text-center text-body-secondary py-5">
-        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Зареждане…
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>{{t "Зареждане…"}}
     </div>
     <div class="table-responsive">
         <table id="projects" class="table table-hover align-middle mb-0 hidden">
             <thead>
                 <tr>
-                    <th>Име</th>
-                    <th class="text-nowrap">Година</th>
-                    <th class="text-nowrap">Файлове</th>
-                    <th class="text-end"><span class="visually-hidden">Действия</span></th>
+                    <th>{{t "Име"}}</th>
+                    <th class="text-nowrap">{{t "Година"}}</th>
+                    <th class="text-nowrap">{{t "Файлове"}}</th>
+                    <th class="text-end"><span class="visually-hidden">{{t "Действия"}}</span></th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -35,11 +35,11 @@
     </div>
     <div id="projects-empty" class="empty-state hidden">
         <div class="empty-state-icon fa">&#xf1c0;</div>
-        <p class="mb-1">Все още няма обекти.</p>
-        {{#if isAdmin}}<p class="text-body-secondary small mb-0">Създайте първия с бутона „Нов обект“.</p>{{/if}}
+        <p class="mb-1">{{t "Все още няма обекти."}}</p>
+        {{#if isAdmin}}<p class="text-body-secondary small mb-0">{{t "Създайте първия с бутона „Нов обект“."}}</p>{{/if}}
     </div>
     <div id="projects-no-match" class="empty-state hidden">
-        <p class="mb-0 text-body-secondary">Няма обекти, които да отговарят на търсенето.</p>
+        <p class="mb-0 text-body-secondary">{{t "Няма обекти, които да отговарят на търсенето."}}</p>
     </div>
 </div>
 
@@ -48,25 +48,25 @@
     <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" id="create-project-form" novalidate>
             <div class="modal-header">
-                <h2 class="modal-title fs-5" id="create-project-title">Нов обект</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Затваряне"></button>
+                <h2 class="modal-title fs-5" id="create-project-title">{{t "Нов обект"}}</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t "Затваряне"}}"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label for="name" class="form-label">Име</label>
+                    <label for="name" class="form-label">{{t "Име"}}</label>
                     <input class="form-control" id="name" type="text" maxlength="20" autocomplete="off" required aria-describedby="name-help" />
                     <div class="invalid-feedback" id="name-error"></div>
-                    <div class="form-text" id="name-help">3–20 символа: латински букви, цифри и тире.</div>
+                    <div class="form-text" id="name-help">{{t "3–20 символа: латински букви, цифри и тире."}}</div>
                 </div>
                 <div>
-                    <label for="year" class="form-label">Година</label>
+                    <label for="year" class="form-label">{{t "Година"}}</label>
                     <input class="form-control" id="year" type="number" min="1900" max="2099" required />
                     <div class="invalid-feedback" id="year-error"></div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отказ</button>
-                <button type="submit" class="btn btn-primary" id="ux-btn-create-project">Създаване</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{t "Отказ"}}</button>
+                <button type="submit" class="btn btn-primary" id="ux-btn-create-project">{{t "Създаване"}}</button>
             </div>
         </form>
     </div>
@@ -76,18 +76,18 @@
     <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" id="rename-project-form" novalidate>
             <div class="modal-header">
-                <h2 class="modal-title fs-5" id="rename-project-title">Преименуване на обект</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Затваряне"></button>
+                <h2 class="modal-title fs-5" id="rename-project-title">{{t "Преименуване на обект"}}</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{t "Затваряне"}}"></button>
             </div>
             <div class="modal-body">
-                <label for="rename-name" class="form-label">Ново име</label>
+                <label for="rename-name" class="form-label">{{t "Ново име"}}</label>
                 <input class="form-control" id="rename-name" type="text" maxlength="20" autocomplete="off" required aria-describedby="rename-name-help" />
                 <div class="invalid-feedback" id="rename-name-error"></div>
-                <div class="form-text" id="rename-name-help">3–20 символа: латински букви, цифри и тире.</div>
+                <div class="form-text" id="rename-name-help">{{t "3–20 символа: латински букви, цифри и тире."}}</div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отказ</button>
-                <button type="submit" class="btn btn-primary" id="ux-btn-rename-project">Запис</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{t "Отказ"}}</button>
+                <button type="submit" class="btn btn-primary" id="ux-btn-rename-project">{{t "Запис"}}</button>
             </div>
         </form>
     </div>

@@ -5,6 +5,8 @@ var templates = function () {
 
     handlebars.registerHelper('bytes', value => pageHelper.formatBytes(value));
     handlebars.registerHelper('count', (value, one, many) => pageHelper.formatCount(value, one, many));
+    // {{t "Текст с {name}" name=value}}; the result is escaped by Handlebars like any other value.
+    handlebars.registerHelper('t', (text, options) => i18n.t(text, options.hash));
     handlebars.registerHelper('date', value => pageHelper.formatDate(value));
     handlebars.registerHelper('slug', value => pageHelper.slug(value));
 

@@ -19,11 +19,11 @@ let pageHelper = (function () {
                 '    <div class="modal-content">' +
                 '      <div class="modal-header">' +
                 '        <h2 class="modal-title fs-5"></h2>' +
-                '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Затваряне"></button>' +
+                '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + i18n.t('Затваряне') + '"></button>' +
                 '      </div>' +
                 '      <div class="modal-body"></div>' +
                 '      <div class="modal-footer">' +
-                '        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отказ</button>' +
+                '        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">' + i18n.t('Отказ') + '</button>' +
                 '        <button type="button" class="btn ux-confirm"></button>' +
                 '      </div>' +
                 '    </div>' +
@@ -36,7 +36,7 @@ let pageHelper = (function () {
             modal.find('.modal-body').text(options.body);
             modal.find('.ux-confirm')
                 .addClass(options.danger ? 'btn-danger' : 'btn-primary')
-                .text(options.confirmText || 'Потвърждение')
+                .text(options.confirmText || i18n.t('Потвърждение'))
                 .on('click', function () {
                     confirmed = true;
                     instance.hide();
@@ -73,15 +73,16 @@ let pageHelper = (function () {
             unit++;
         } while (value >= 1024 && unit < units.length - 1);
 
-        return value.toLocaleString('bg-BG', { maximumFractionDigits: value < 10 ? 1 : 0 }) + ' ' + units[unit];
+        return value.toLocaleString(i18n.locale, { maximumFractionDigits: value < 10 ? 1 : 0 }) + ' ' + units[unit];
     }
 
+    // one / many are Bulgarian words, translated here: formatCount(3, 'файл', 'файла').
     function formatCount(count, one, many) {
         if (count === null || count === undefined) {
             return '';
         }
 
-        return count.toLocaleString('bg-BG') + ' ' + (count === 1 ? one : many);
+        return count.toLocaleString(i18n.locale) + ' ' + i18n.t(count === 1 ? one : many);
     }
 
     // SQLite "YYYY-MM-DD HH:MM:SS" (UTC) -> local date.
@@ -92,13 +93,13 @@ let pageHelper = (function () {
 
         let date = moment.utc(value, 'YYYY-MM-DD HH:mm:ss');
 
-        return date.isValid() ? date.local().format('DD.MM.YYYY') : value;
+        return date.isValid() ? date.local().format(i18n.dateFormat) : value;
     }
 
     // Copies text to the clipboard. navigator.clipboard needs HTTPS (or localhost), so plain-HTTP
     // LAN access falls back to execCommand; if that fails too, the text is shown to copy by hand.
     function copyText(text, successMessage) {
-        let done = () => toastr.success(successMessage || 'Копирано.');
+        let done = () => toastr.success(successMessage || i18n.t('Копирано.'));
 
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
@@ -122,7 +123,7 @@ let pageHelper = (function () {
                 throw new Error();
             }
         } catch (e) {
-            toastr.info('Копирайте ръчно: ' + text);
+            toastr.info(i18n.t('Копирайте ръчно: {text}', { text: text }));
         }
 
         input.remove();
@@ -138,8 +139,8 @@ let pageHelper = (function () {
         );
 
         if (entry.hidden) {
-            row.addClass('legend-hidden').attr('title', 'Показва се при по-голямо приближение');
-            row.find('.legend-label').append($('<span class="legend-hint"></span>').text(' · приближете'));
+            row.addClass('legend-hidden').attr('title', i18n.t('Показва се при по-голямо приближение'));
+            row.find('.legend-label').append($('<span class="legend-hint"></span>').text(' · ' + i18n.t('приближете')));
         }
 
         return row;

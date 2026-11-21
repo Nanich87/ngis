@@ -3,7 +3,6 @@
 let authController = (function () {
 
     let pageID = 'auth';
-    let pageTemplate = './views/auth.html';
 
     function initPage(container) {
         pageHelper.setActivePage(pageID);
@@ -20,8 +19,10 @@ let authController = (function () {
     }
 
     function render(container) {
-        $(container).load(pageTemplate, function () {
-            document.title = 'Вход – nGIS';
+        templates.get('auth').then(function (template) {
+            $(container).html(template({}));
+
+            document.title = i18n.t('Вход') + ' – nGIS';
 
             // Returning false keeps the browser from submitting (and reloading) the page.
             $('#ux-form-auth').on('submit', function () {
@@ -37,14 +38,14 @@ let authController = (function () {
         let password = $('#password').val();
 
         if (!validationHelper.validateEmail(email) || email.indexOf('@') === -1) {
-            toastr.error('Невалиден Email адрес!');
+            toastr.error(i18n.t('Невалиден Email адрес!'));
             $('#email').trigger('focus');
 
             return;
         }
 
         if (!validationHelper.validatePassword(password)) {
-            toastr.error('Въведете парола!');
+            toastr.error(i18n.t('Въведете парола!'));
             $('#password').trigger('focus');
 
             return;
@@ -53,7 +54,7 @@ let authController = (function () {
         let button = $('#ux-btn-submit').prop('disabled', true);
 
         authService.signIn(email, password).then(function () {
-            toastr.success('Успешен вход');
+            toastr.success(i18n.t('Успешен вход'));
 
             window.location.href = '#/map';
         }, function (error) {

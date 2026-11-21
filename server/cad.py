@@ -19,6 +19,8 @@ detected automatically.
 
 from collections import defaultdict
 
+from i18n import _
+
 CRS_NAME = 'urn:ogc:def:crs:EPSG::7801'
 
 # Contour types of the CADASTER layer: (GeoJSON "type" property, readable name).
@@ -37,7 +39,7 @@ AREA_RELATIVE_TOLERANCE = 0.001
 
 
 class CadError(ValueError):
-    """The file cannot be converted; the message is shown to the user (in Bulgarian)."""
+    """The file cannot be converted; the message (an i18n Message) is shown to the user."""
 
 
 # --------------------------------------------------------------------------- encoding
@@ -60,7 +62,7 @@ def decode(data):
     # Cyrillic letters are 0x80–0xBF in MIK and 0xC0–0xFF in windows-1251.
     if sum(1 for b in high if b >= 0xC0) > len(high) / 2:
         return data.decode('cp1251', errors='replace'), 'windows-1251'
-    return data.decode('latin-1').translate(_MIK_TABLE), 'МИК'
+    return data.decode('latin-1').translate(_MIK_TABLE), _('МИК')
 
 
 # --------------------------------------------------------------------------- parsing
@@ -69,9 +71,9 @@ def _number(text, what):
     try:
         value = float(text)
     except ValueError:
-        raise CadError('Невалидно число „{}“ ({}).'.format(text[:20], what)) from None
+        raise CadError(_('Невалидно число „{text}“ ({where}).', text=text[:20], where=what)) from None
     if value != value or value in (float('inf'), float('-inf')):
-        raise CadError('Невалидно число „{}“ ({}).'.format(text[:20], what))
+        raise CadError(_('Невалидно число „{text}“ ({where}).', text=text[:20], where=what))
     return value
 
 
@@ -129,27 +131,27 @@ def parse(text):
             end = continuation(i + 1)
             if key == 'L':
                 if len(tokens) < 3:
-                    raise CadError('Невалиден запис за линия на ред {}.'.format(i + 1))
+                    raise CadError(_('Невалиден запис за линия на ред {line}.', line=i + 1))
                 coords = []
                 for row in rows[i + 1:end]:
                     for item in row.split(';'):
                         parts = item.split()
                         if len(parts) >= 3:
-                            coords.append((_number(parts[1], 'ред {}'.format(i + 1)),
-                                           _number(parts[2], 'ред {}'.format(i + 1))))
+                            coords.append((_number(parts[1], _('ред {line}', line=i + 1)),
+                                           _number(parts[2], _('ред {line}', line=i + 1))))
                 points += len(coords)
                 if points > MAX_POINTS:
-                    raise CadError('Файлът съдържа твърде много точки.')
+                    raise CadError(_('Файлът съдържа твърде много точки.'))
                 if len(coords) >= 2:
                     layer.lines[tokens[2]] = coords
             elif key == 'C':
                 if len(tokens) < 5:
-                    raise CadError('Невалиден запис за контур на ред {}.'.format(i + 1))
+                    raise CadError(_('Невалиден запис за контур на ред {line}.', line=i + 1))
                 line_ids = [n for row in rows[i + 1:end] for n in row.split()]
                 layer.contours.append({
                     'type': tokens[1],
                     'id': tokens[2],
-                    'label': (_number(tokens[3], 'ред {}'.format(i + 1)), _number(tokens[4], 'ред {}'.format(i + 1))),
+                    'label': (_number(tokens[3], _('ред {line}', line=i + 1)), _number(tokens[4], _('ред {line}', line=i + 1))),
                     'date': tokens[5] if len(tokens) > 5 else None,
                     'lines': line_ids,
                 })
@@ -160,13 +162,13 @@ def parse(text):
         elif section[0] == 'CONTROL':
             layer = section[1]
             if key == 'CONTUR_AREA' and len(tokens) >= 3:
-                layer.areas[tokens[1]] = _number(tokens[2], 'площ на ' + tokens[1])
+                layer.areas[tokens[1]] = _number(tokens[2], _('площ на {contour}', contour=tokens[1]))
             elif key == 'CONTUR_NESTED' and len(tokens) >= 3:
                 layer.nested.setdefault(tokens[1], []).extend(tokens[2:])
         i += 1
 
     if 'HEADER' not in (r.split()[0].upper() for r in rows[:50] if r.split()):
-        raise CadError('Файлът не е във формат CAD (липсва HEADER).')
+        raise CadError(_('Файлът не е във формат CAD (липсва HEADER).'))
     return header, layers
 
 
@@ -264,14 +266,14 @@ def convert(data):
     coordtype = header.get('COORDTYPE', '')
     system = coordtype.split(',')[0].strip()
     if not system:
-        raise CadError('Във файла липсва координатна система (COORDTYPE).')
+        raise CadError(_('Във файла липсва координатна система (COORDTYPE).'))
     if system != '2005':
-        raise CadError('Координатна система „{}“ не се поддържа. Поддържа се само БГС2005 (COORDTYPE 2005).'.format(system))
+        raise CadError(_('Координатна система „{system}“ не се поддържа. Поддържа се само БГС2005 (COORDTYPE 2005).', system=system))
 
     try:
         ref_n, ref_e = (float(v) for v in header.get('REFERENCE', '0 0').split()[:2])
     except ValueError:
-        raise CadError('Невалиден REFERENCE в заглавната част.') from None
+        raise CadError(_('Невалиден REFERENCE в заглавната част.')) from None
 
     ekatte = header.get('EKATTE', '').strip()
     place = header.get('NAME', '').strip()
@@ -339,20 +341,27 @@ def convert(data):
             features.append({'type': 'Feature', 'properties': properties, 'geometry': geometry})
 
         if unclosed:
-            warnings.append('{} контура в слой {} не могат да бъдат затворени и са пропуснати: {}'.format(
-                len(unclosed), layer.name, ', '.join(unclosed[:10]) + (' …' if len(unclosed) > 10 else '')))
+            warnings.append(_('{count} контура в слой {layer} не могат да бъдат затворени и са пропуснати: {list}',
+                              count=len(unclosed), layer=layer.name,
+                              list=', '.join(unclosed[:10]) + (' …' if len(unclosed) > 10 else '')))
         if bad_area:
-            warnings.append('{} контура в слой {} се различават от официалната площ: {}'.format(
-                len(bad_area), layer.name, ', '.join(bad_area[:10]) + (' …' if len(bad_area) > 10 else '')))
+            warnings.append(_('{count} контура в слой {layer} се различават от официалната площ: {list}',
+                              count=len(bad_area), layer=layer.name,
+                              list=', '.join(bad_area[:10]) + (' …' if len(bad_area) > 10 else '')))
 
-    names = {'P': 'точки', 'S': 'символи', 'T': 'текстове'}
+    messages = {
+        'P': 'Пропуснати точки: {count} (още не се поддържат).',
+        'S': 'Пропуснати символи: {count} (още не се поддържат).',
+        'T': 'Пропуснати текстове: {count} (още не се поддържат).',
+    }
     for record, count in sorted(skipped.items()):
-        warnings.append('Пропуснати {} {} (още не се поддържат).'.format(count, names.get(record, 'записа „' + record + '“')))
+        warnings.append(_(messages[record], count=count) if record in messages else
+                        _('Пропуснати записи „{record}“: {count} (още не се поддържат).', record=record, count=count))
     if 'TABLE' in text and any(r.strip().upper().startswith('TABLE') for r in text.splitlines()):
-        warnings.append('Таблиците с атрибути (TABLE) още не се поддържат.')
+        warnings.append(_('Таблиците с атрибути (TABLE) още не се поддържат.'))
 
     if not features:
-        raise CadError('Във файла няма контури, които да могат да бъдат показани.')
+        raise CadError(_('Във файла няма контури, които да могат да бъдат показани.'))
 
     features.sort(key=lambda f: DRAW_ORDER.get(f['properties']['type'], 2))
     geojson = {

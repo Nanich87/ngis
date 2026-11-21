@@ -681,7 +681,7 @@ class StaticAndHeaderTests(ServerTestCase):
                 self.assertIsNotNone(r.header('Referrer-Policy'))
 
     def test_content_security_policy(self):
-        for path in ['/', '/api/me', '/views/map.html']:
+        for path in ['/', '/api/me', '/views/map.handlebars']:
             with self.subTest(path=path):
                 csp = Client(self.port).get(path).header('Content-Security-Policy') or ''
                 directives = {d.strip().split(' ', 1)[0]: d.strip() for d in csp.split(';') if d.strip()}

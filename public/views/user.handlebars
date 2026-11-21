@@ -4,23 +4,23 @@
         <div class="min-w-0">
             <h1 class="page-title text-break" id="titleName">{{#if user.displayName}}{{ user.displayName }}{{else}}{{ user.email }}{{/if}}</h1>
             <p class="page-subtitle d-flex flex-wrap gap-1">
-                {{#if user.isAdmin}}<span class="badge text-bg-primary">Администратор</span>{{/if}}
-                {{#if user.canRead}}<span class="badge text-bg-secondary">Четене</span>{{/if}}
-                {{#if user.canWrite}}<span class="badge text-bg-secondary">Запис</span>{{/if}}
-                {{#unless hasAnyRights}}<span class="badge text-bg-warning">Без права за достъп</span>{{/unless}}
+                {{#if user.isAdmin}}<span class="badge text-bg-primary">{{t "Администратор"}}</span>{{/if}}
+                {{#if user.canRead}}<span class="badge text-bg-secondary">{{t "Четене"}}</span>{{/if}}
+                {{#if user.canWrite}}<span class="badge text-bg-secondary">{{t "право|Запис"}}</span>{{/if}}
+                {{#unless hasAnyRights}}<span class="badge text-bg-warning">{{t "Без права за достъп"}}</span>{{/unless}}
             </p>
         </div>
     </div>
     {{#if user.isAdmin}}
     <div class="page-actions">
-        <a href="/#/admin" class="btn btn-neutral"><span class="fa">&#xf0c0;</span> Управление на потребители</a>
+        <a href="/#/admin" class="btn btn-neutral"><span class="fa">&#xf0c0;</span> {{t "Управление на потребители"}}</a>
     </div>
     {{/if}}
 </div>
 
 {{#unless hasAnyRights}}
 <div class="alert alert-warning">
-    Все още нямате права за достъп до обектите. Изпратете своя ID на администратор, за да ви ги даде.
+    {{t "Все още нямате права за достъп до обектите. Изпратете своя ID на администратор, за да ви ги даде."}}
 </div>
 {{/unless}}
 
@@ -28,29 +28,29 @@
     <div class="col-lg-7">
         <form class="card" id="profile-form" novalidate>
             <div class="card-header">
-                <h2 class="card-title fs-6 mb-0">Профил</h2>
+                <h2 class="card-title fs-6 mb-0">{{t "Профил"}}</h2>
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label for="displayName" class="form-label">Име</label>
+                    <label for="displayName" class="form-label">{{t "Име"}}</label>
                     <input class="form-control" id="displayName" value="{{ user.displayName }}" type="text" maxlength="100" autocomplete="name" />
                 </div>
                 <div>
-                    <label for="photoURL" class="form-label">Снимка (URL)</label>
+                    <label for="photoURL" class="form-label">{{t "Снимка (URL)"}}</label>
                     <input class="form-control" id="photoURL" value="{{ user.photoURL }}" type="url" placeholder="https://…" aria-describedby="photo-help" />
-                    <div class="invalid-feedback">Въведете адрес, започващ с http:// или https://.</div>
-                    <div class="form-text" id="photo-help">По избор. Без снимка се показват инициалите ви.</div>
+                    <div class="invalid-feedback">{{t "Въведете адрес, започващ с http:// или https://."}}</div>
+                    <div class="form-text" id="photo-help">{{t "По избор. Без снимка се показват инициалите ви."}}</div>
                 </div>
             </div>
             <div class="card-footer text-end">
-                <button type="submit" id="ux-btn-save" class="btn btn-primary">Запис</button>
+                <button type="submit" id="ux-btn-save" class="btn btn-primary">{{t "Запис"}}</button>
             </div>
         </form>
     </div>
     <div class="col-lg-5">
         <div class="card mb-4">
             <div class="card-header">
-                <h2 class="card-title fs-6 mb-0">Акаунт</h2>
+                <h2 class="card-title fs-6 mb-0">{{t "Акаунт"}}</h2>
             </div>
             <div class="card-body">
                 <dl class="account-details mb-0">
@@ -59,7 +59,7 @@
                     <dt>ID</dt>
                     <dd class="d-flex align-items-center gap-2">
                         <code class="text-break" id="uid">{{ user.uid }}</code>
-                        <button type="button" class="btn btn-sm btn-neutral" id="ux-btn-copy-uid" title="Копиране" aria-label="Копиране на ID"><span class="fa">&#xf0c5;</span></button>
+                        <button type="button" class="btn btn-sm btn-neutral" id="ux-btn-copy-uid" title="{{t "Копиране"}}" aria-label="{{t "Копиране на ID"}}"><span class="fa">&#xf0c5;</span></button>
                     </dd>
                 </dl>
             </div>
@@ -67,29 +67,29 @@
 
         <form class="card" id="password-form" novalidate>
             <div class="card-header">
-                <h2 class="card-title fs-6 mb-0">Смяна на парола</h2>
+                <h2 class="card-title fs-6 mb-0">{{t "Смяна на парола"}}</h2>
             </div>
             <div class="card-body">
                 <input type="text" class="visually-hidden" name="username" value="{{ user.email }}" autocomplete="username" tabindex="-1" aria-hidden="true" />
                 <div class="mb-3">
-                    <label for="current-password" class="form-label">Текуща парола</label>
+                    <label for="current-password" class="form-label">{{t "Текуща парола"}}</label>
                     <input class="form-control" id="current-password" type="password" autocomplete="current-password" required />
                     <div class="invalid-feedback" id="current-password-error"></div>
                 </div>
                 <div class="mb-3">
-                    <label for="new-password" class="form-label">Нова парола</label>
+                    <label for="new-password" class="form-label">{{t "Нова парола"}}</label>
                     <input class="form-control" id="new-password" type="password" autocomplete="new-password" minlength="10" required aria-describedby="new-password-help" />
                     <div class="invalid-feedback" id="new-password-error"></div>
-                    <div class="form-text" id="new-password-help">Поне 10 символа. Ще излезете от всички други устройства.</div>
+                    <div class="form-text" id="new-password-help">{{t "Поне 10 символа. Ще излезете от всички други устройства."}}</div>
                 </div>
                 <div>
-                    <label for="new-password-repeat" class="form-label">Повторете новата парола</label>
+                    <label for="new-password-repeat" class="form-label">{{t "Повторете новата парола"}}</label>
                     <input class="form-control" id="new-password-repeat" type="password" autocomplete="new-password" required />
                     <div class="invalid-feedback" id="new-password-repeat-error"></div>
                 </div>
             </div>
             <div class="card-footer text-end">
-                <button type="submit" id="ux-btn-change-password" class="btn btn-primary">Смяна на паролата</button>
+                <button type="submit" id="ux-btn-change-password" class="btn btn-primary">{{t "Смяна на паролата"}}</button>
             </div>
         </form>
     </div>

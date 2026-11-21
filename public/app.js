@@ -6,14 +6,25 @@
     function updateNavigation(user) {
         if (user) {
             $('#ux-btn-profile').html('<span class="fa">&#xf007;</span> ').append(document.createTextNode(user.email)).attr('href', '/#/user').removeClass('hidden');
-            $('#ux-btn-auth').html('<span class="fa">&#xf08b;</span> Изход').attr('href', '/#/logout');
+            $('#ux-btn-auth').html('<span class="fa">&#xf08b;</span> ').append(document.createTextNode(i18n.t('Изход'))).attr('href', '/#/logout');
             $('#ux-btn-admin').toggleClass('hidden', !user.isAdmin);
         } else {
             $('#ux-btn-admin').addClass('hidden');
             $('#ux-btn-profile').html('').attr('href', '#').addClass('hidden');
-            $('#ux-btn-auth').html('<span class="fa">&#xf090;</span> Вход').attr('href', '/#/auth');
+            $('#ux-btn-auth').html('<span class="fa">&#xf090;</span> ').append(document.createTextNode(i18n.t('Вход'))).attr('href', '/#/auth');
         }
     }
+
+    i18n.translateDom(document.body);
+
+    // The button offers the other language.
+    let otherLanguage = i18n.LANGUAGES.find(l => l.code !== i18n.lang);
+
+    $('#ux-btn-language')
+        .text(otherLanguage.label)
+        .attr('title', otherLanguage.name)
+        .attr('lang', otherLanguage.code)
+        .on('click', () => i18n.setLanguage(otherLanguage.code));
 
     authService.onAuthStateChanged(updateNavigation);
 

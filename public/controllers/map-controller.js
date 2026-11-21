@@ -3,8 +3,6 @@
 let mapController = (function () {
 
     let pageID = 'map';
-    let pageTitle = 'Карта';
-    let pageTemplate = './views/map.html';
     let baseMapStorageKey = 'ngis.baseMap';
 
     // Incremented on every render so late async callbacks from a previous visit are ignored.
@@ -26,8 +24,14 @@ let mapController = (function () {
 
         projectState = {};
 
-        $(container).load(pageTemplate, function () {
-            document.title = pageTitle;
+        templates.get('map').then(function (template) {
+            if (token !== renderToken) {
+                return;
+            }
+
+            $(container).html(template({}));
+
+            document.title = i18n.t('Карта') + ' – nGIS';
 
             pageHelper.setActivePage(pageID);
 
@@ -49,7 +53,7 @@ let mapController = (function () {
                 }
 
                 if (!user.canRead && !user.isAdmin) {
-                    $('#project-tree').html('<div class="alert alert-warning small mb-0">Нямате права за четене на обекти. Обърнете се към администратор.</div>');
+                    $('#project-tree').html($('<div class="alert alert-warning small mb-0"></div>').text(i18n.t('Нямате права за четене на обекти. Обърнете се към администратор.')));
 
                     return;
                 }
@@ -68,7 +72,7 @@ let mapController = (function () {
                             checkbox.prop('checked', true);
                             toggleProject(preselectedProjectId, true, true, token);
                         } else {
-                            toastr.error('Няма такъв обект!');
+                            toastr.error(i18n.t('Няма такъв обект!'));
                         }
                     }
                 });
@@ -100,7 +104,7 @@ let mapController = (function () {
 
             let input = $('<input type="radio" class="btn-check" name="base-map" autocomplete="off" />')
                 .attr('id', id).val(baseMap.id).prop('checked', baseMap.id === selected);
-            let label = $('<label class="btn btn-neutral"></label>').attr('for', id).attr('title', baseMap.title).text(baseMap.label);
+            let label = $('<label class="btn btn-neutral"></label>').attr('for', id).attr('title', i18n.t(baseMap.title)).text(i18n.t(baseMap.label));
 
             group.append(input, label);
         });
@@ -124,7 +128,7 @@ let mapController = (function () {
         let tree = $('#project-tree').empty();
 
         if (projects.length === 0) {
-            tree.html('<div class="text-body-secondary small py-2">Няма създадени обекти.</div>');
+            tree.html($('<div class="text-body-secondary small py-2"></div>').text(i18n.t('Няма създадени обекти.')));
 
             return;
         }
@@ -135,7 +139,8 @@ let mapController = (function () {
             let checkbox = $('<input class="form-check-input project-toggle" type="checkbox" />').attr('id', 'prj-' + domId);
             let label = $('<label class="form-check-label project-name text-truncate"></label>').attr('for', 'prj-' + domId).text(project.name);
             let year = $('<span class="badge text-bg-secondary"></span>').text(project.year);
-            let zoom = $('<button type="button" class="btn btn-sm btn-link project-zoom" title="Приближи до обекта" aria-label="Приближи до обекта" disabled><span class="fa">&#xf05b;</span></button>');
+            let zoom = $('<button type="button" class="btn btn-sm btn-link project-zoom" disabled><span class="fa">&#xf05b;</span></button>')
+                .attr('title', i18n.t('Приближи до обекта')).attr('aria-label', i18n.t('Приближи до обекта'));
 
             let row = $('<div class="project-row"></div>').append(checkbox, label, year, zoom);
             let layerList = $('<ul class="layer-list list-unstyled hidden"></ul>');
@@ -153,7 +158,7 @@ let mapController = (function () {
                 let ids = zoomableLayerIds(projectState[project.id]);
 
                 if (!map.zoomToLayers(ids)) {
-                    toastr.info('Обектът няма данни за показване.');
+                    toastr.info(i18n.t('Обектът няма данни за показване.'));
                 }
             });
 
@@ -193,7 +198,8 @@ let mapController = (function () {
 
         state.loading = true;
 
-        let spinner = $('<li class="text-body-secondary small"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Зареждане…</li>');
+        let spinner = $('<li class="text-body-secondary small"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span></li>')
+            .append(document.createTextNode(i18n.t('Зареждане…')));
         item.find('.layer-list').removeClass('hidden').append(spinner);
 
         projectService.getProjectData(projectId).then(function (layers) {
@@ -214,10 +220,10 @@ let mapController = (function () {
                     state.layers.push({ id: layer.id, title: layer.title, unsupportedCrs: crs });
 
                     if (crs) {
-                        toastr.warning('Файлът „' + layer.title + '“ е в координатна система ' + crs + ', която не се поддържа. Може да се покаже на грешно място.');
+                        toastr.warning(i18n.t('Файлът „{file}“ е в координатна система {crs}, която не се поддържа. Може да се покаже на грешно място.', { file: layer.title, crs: crs }));
                     }
                 } catch (e) {
-                    toastr.warning('Файлът „' + layer.title + '“ не може да бъде показан.');
+                    toastr.warning(i18n.t('Файлът „{file}“ не може да бъде показан.', { file: layer.title }));
                 }
             });
 
@@ -252,7 +258,7 @@ let mapController = (function () {
         item.find('.project-zoom').prop('disabled', state.layers.length === 0);
 
         if (state.layers.length === 0) {
-            list.append('<li class="text-body-secondary small">Няма качени файлове.</li>');
+            list.append($('<li class="text-body-secondary small"></li>').text(i18n.t('Няма качени файлове.')));
 
             return;
         }
@@ -264,7 +270,8 @@ let mapController = (function () {
             let checkbox = $('<input class="form-check-input layer-toggle" type="checkbox" checked />').attr('id', domId);
             let label = $('<label class="form-check-label text-truncate"></label>').attr('for', domId).attr('title', layer.title).text(layer.title);
             let meta = $('<span class="layer-count"></span>').text(count);
-            let zoom = $('<button type="button" class="btn btn-sm btn-link" title="Приближи до слоя" aria-label="Приближи до слоя"><span class="fa">&#xf05b;</span></button>');
+            let zoom = $('<button type="button" class="btn btn-sm btn-link"><span class="fa">&#xf05b;</span></button>')
+                .attr('title', i18n.t('Приближи до слоя')).attr('aria-label', i18n.t('Приближи до слоя'));
 
             checkbox.on('change', function () {
                 map.setLayerVisible(layer.id, this.checked);
@@ -273,7 +280,7 @@ let mapController = (function () {
 
             zoom.on('click', function () {
                 if (!map.zoomToLayers([layer.id])) {
-                    toastr.info('Слоят няма обекти.');
+                    toastr.info(i18n.t('Слоят няма обекти.'));
                 }
             });
 
@@ -281,8 +288,8 @@ let mapController = (function () {
 
             if (layer.unsupportedCrs) {
                 row.append($('<span class="fa text-warning layer-warning" role="img">&#xf071;</span>')
-                    .attr('title', 'Непозната координатна система: ' + layer.unsupportedCrs)
-                    .attr('aria-label', 'Непозната координатна система: ' + layer.unsupportedCrs));
+                    .attr('title', i18n.t('Непозната координатна система: {crs}', { crs: layer.unsupportedCrs }))
+                    .attr('aria-label', i18n.t('Непозната координатна система: {crs}', { crs: layer.unsupportedCrs })));
             }
 
             list.append(row.append(meta, zoom));
@@ -305,7 +312,7 @@ let mapController = (function () {
         let entries = map.getLegend();
 
         if (entries.length === 0) {
-            legend.append('<li class="text-body-secondary small">Включете обект, за да видите легендата.</li>');
+            legend.append($('<li class="text-body-secondary small"></li>').text(i18n.t('Включете обект, за да видите легендата.')));
 
             return;
         }

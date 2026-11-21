@@ -1,6 +1,6 @@
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/#/projects">Обекти</a></li>
+        <li class="breadcrumb-item"><a href="/#/projects">{{t "Обекти"}}</a></li>
         <li class="breadcrumb-item active" aria-current="page">{{ project.name }}</li>
     </ol>
 </nav>
@@ -10,20 +10,20 @@
         <h1 class="page-title">{{ project.name }} <span class="badge text-bg-secondary align-middle fs-6">{{ project.year }}</span></h1>
         <p class="page-subtitle">
             {{count layerCount "файл" "файла"}}{{#if featureCount}} · {{count featureCount "геообект" "геообекта"}}{{/if}}
-            {{#if project.created_at}} · създаден на {{date project.created_at}}{{/if}}
+            {{#if project.created_at}} · {{t "създаден на {date}" date=(date project.created_at)}}{{/if}}
         </p>
     </div>
     <div class="page-actions">
-        <a href="/#/map/{{ project.id }}" class="btn btn-primary"><span class="fa">&#xf279;</span> Покажи на картата</a>
+        <a href="/#/map/{{ project.id }}" class="btn btn-primary"><span class="fa">&#xf279;</span> {{t "Покажи на картата"}}</a>
         {{#if isAdmin}}
-        <button type="button" id="ux-btn-delete-project" class="btn btn-outline-danger"><span class="fa">&#xf1f8;</span> Изтриване</button>
+        <button type="button" id="ux-btn-delete-project" class="btn btn-outline-danger"><span class="fa">&#xf1f8;</span> {{t "Изтриване"}}</button>
         {{/if}}
     </div>
 </div>
 
 <div class="card mb-4">
     <div class="card-header d-flex align-items-center">
-        <h2 class="card-title fs-6 mb-0">Файлове</h2>
+        <h2 class="card-title fs-6 mb-0">{{t "Файлове"}}</h2>
     </div>
     {{#if project.layers.length}}
     <ul class="list-group list-group-flush">
@@ -37,9 +37,9 @@
                 </div>
             </div>
             <div class="file-actions">
-                <a href="/#/project/edit/{{slug ../project.name}}/{{ ../project.id }}/layer/{{ id }}" class="btn btn-sm btn-neutral">Преглед</a>
+                <a href="/#/project/edit/{{slug ../project.name}}/{{ ../project.id }}/layer/{{ id }}" class="btn btn-sm btn-neutral">{{t "Преглед"}}</a>
                 {{#if ../canWrite}}
-                <button type="button" class="btn btn-sm btn-outline-danger ux-btn-delete-file" data-id="{{ id }}" data-title="{{ title }}" aria-label="Изтриване на {{ title }}"><span class="fa">&#xf1f8;</span></button>
+                <button type="button" class="btn btn-sm btn-outline-danger ux-btn-delete-file" data-id="{{ id }}" data-title="{{ title }}" aria-label="{{t "Изтриване на {name}" name=title}}"><span class="fa">&#xf1f8;</span></button>
                 {{/if}}
             </div>
         </li>
@@ -48,7 +48,7 @@
     {{else}}
     <div class="empty-state">
         <div class="empty-state-icon fa">&#xf15b;</div>
-        <p class="mb-0">Няма качени файлове.</p>
+        <p class="mb-0">{{t "Няма качени файлове."}}</p>
     </div>
     {{/if}}
 </div>
@@ -56,13 +56,13 @@
 {{#if canWrite}}
 <div class="card">
     <div class="card-header">
-        <h2 class="card-title fs-6 mb-0">Качване на файлове</h2>
+        <h2 class="card-title fs-6 mb-0">{{t "Качване на файлове"}}</h2>
     </div>
     <div class="card-body">
         <label for="file" class="dropzone" id="dropzone">
             <span class="dropzone-icon fa" aria-hidden="true">&#xf093;</span>
-            <span class="dropzone-text">Пуснете GeoJSON, CAD или GPX файлове тук или <span class="text-primary">изберете от компютъра</span></span>
-            <span class="dropzone-hint">.geojson / .json · WGS84, Web Mercator или обявена в „crs“ система (напр. BGS2005)<br />.cad · формат за обмен на кадастрални данни в БГС2005<br />.gpx · точки, маршрути и трасета от GPS</span>
+            <span class="dropzone-text">{{t "Пуснете GeoJSON, CAD или GPX файлове тук или"}} <span class="text-primary">{{t "изберете от компютъра"}}</span></span>
+            <span class="dropzone-hint">{{t ".geojson / .json · WGS84, Web Mercator или обявена в „crs“ система (напр. BGS2005)"}}<br />{{t ".cad · формат за обмен на кадастрални данни в БГС2005"}}<br />{{t ".gpx · точки, маршрути и трасета от GPS"}}</span>
             <input id="file" type="file" class="visually-hidden" accept=".geojson,.json,.cad,.gpx,application/geo+json,application/json" multiple />
         </label>
         <ul id="upload-status" class="list-unstyled small mt-3 mb-0"></ul>

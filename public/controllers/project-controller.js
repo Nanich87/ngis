@@ -19,7 +19,7 @@ let projectController = (function () {
     // ------------------------------------------------------------------ project list
 
     function initPage(container) {
-        document.title = 'Обекти – nGIS';
+        document.title = i18n.t('Обекти') + ' – nGIS';
 
         pageHelper.setActivePage(pageID);
 
@@ -75,21 +75,22 @@ let projectController = (function () {
             : $('<span class="text-body-secondary">—</span>');
 
         let actions = $('<div class="d-inline-flex gap-2"></div>').append(
-            $('<a class="btn btn-sm btn-neutral text-nowrap"><span class="fa">&#xf279;</span> Карта</a>').attr('href', '/#/map/' + project.id)
+            $('<a class="btn btn-sm btn-neutral text-nowrap"><span class="fa">&#xf279;</span> </a>')
+                .append(document.createTextNode(i18n.t('Карта'))).attr('href', '/#/map/' + project.id)
         );
 
         if (user.isAdmin) {
             let rename = $('<button type="button" class="btn btn-sm btn-neutral"><span class="fa">&#xf040;</span></button>')
-                .attr('aria-label', 'Преименуване на ' + project.name)
-                .attr('title', 'Преименуване');
+                .attr('aria-label', i18n.t('Преименуване на {name}', { name: project.name }))
+                .attr('title', i18n.t('Преименуване'));
 
             rename.on('click', () => openRenameModal(project, row, user));
 
             actions.append(rename);
 
             let remove = $('<button type="button" class="btn btn-sm btn-outline-danger"><span class="fa">&#xf1f8;</span></button>')
-                .attr('aria-label', 'Изтриване на ' + project.name)
-                .attr('title', 'Изтриване');
+                .attr('aria-label', i18n.t('Изтриване на {name}', { name: project.name }))
+                .attr('title', i18n.t('Изтриване'));
 
             remove.on('click', function () {
                 deleteProject(project).then(function (deleted) {
@@ -169,9 +170,9 @@ let projectController = (function () {
     }
 
     function projectNameError(name) {
-        return name.length < 3 ? 'Името трябва да е поне 3 символа.'
-            : name.length > 20 ? 'Името може да е най-много 20 символа.'
-                : !NAME_PATTERN.test(name) ? 'Разрешени са само латински букви, цифри и тире.'
+        return name.length < 3 ? i18n.t('Името трябва да е поне 3 символа.')
+            : name.length > 20 ? i18n.t('Името може да е най-много 20 символа.')
+                : !NAME_PATTERN.test(name) ? i18n.t('Разрешени са само латински букви, цифри и тире.')
                     : null;
     }
 
@@ -228,7 +229,7 @@ let projectController = (function () {
         let button = $('#ux-btn-rename-project').prop('disabled', true);
 
         projectService.renameProject(target.project.id, name).then(function () {
-            toastr.success('Обектът беше преименуван.');
+            toastr.success(i18n.t('Обектът беше преименуван.'));
 
             let project = Object.assign({}, target.project, { name: name });
             let row = projectRow(project, target.user);
@@ -249,7 +250,7 @@ let projectController = (function () {
         let year = $('#year').val().trim();
 
         let nameError = projectNameError(name);
-        let yearError = !YEAR_PATTERN.test(year) ? 'Въведете година между 1900 и 2099.' : null;
+        let yearError = !YEAR_PATTERN.test(year) ? i18n.t('Въведете година между 1900 и 2099.') : null;
 
         let invalid = fieldError('#name', nameError);
         invalid = fieldError('#year', yearError) || invalid;
@@ -263,7 +264,7 @@ let projectController = (function () {
         let button = $('#ux-btn-create-project').prop('disabled', true);
 
         projectService.createProject(name, year).then(function (project) {
-            toastr.success('Обектът беше създаден.');
+            toastr.success(i18n.t('Обектът беше създаден.'));
 
             bootstrap.Modal.getInstance(document.getElementById('create-project-modal')).hide();
 
@@ -278,9 +279,9 @@ let projectController = (function () {
 
     function deleteProject(project) {
         return pageHelper.confirm({
-            title: 'Изтриване на обект',
-            body: 'Обектът „' + project.name + '“ и всички негови файлове ще бъдат изтрити безвъзвратно.',
-            confirmText: 'Изтриване',
+            title: i18n.t('Изтриване на обект'),
+            body: i18n.t('Обектът „{name}“ и всички негови файлове ще бъдат изтрити безвъзвратно.', { name: project.name }),
+            confirmText: i18n.t('Изтриване'),
             danger: true
         }).then(function (confirmed) {
             if (!confirmed) {
@@ -288,7 +289,7 @@ let projectController = (function () {
             }
 
             return projectService.deleteProject(project.id).then(function () {
-                toastr.success('Обектът беше изтрит.');
+                toastr.success(i18n.t('Обектът беше изтрит.'));
 
                 return true;
             }, function (error) {
@@ -389,7 +390,7 @@ let projectController = (function () {
             let reader = new FileReader();
 
             reader.onload = () => resolve(reader.result);
-            reader.onerror = () => reject(new Error('Файлът не може да бъде прочетен.'));
+            reader.onerror = () => reject(new Error(i18n.t('Файлът не може да бъде прочетен.')));
             reader.readAsText(file, 'UTF-8');
         });
     }
@@ -400,7 +401,7 @@ let projectController = (function () {
 
             // "data:application/octet-stream;base64,AAAA" -> "AAAA"
             reader.onload = () => resolve(reader.result.slice(reader.result.indexOf(',') + 1));
-            reader.onerror = () => reject(new Error('Файлът не може да бъде прочетен.'));
+            reader.onerror = () => reject(new Error(i18n.t('Файлът не може да бъде прочетен.')));
             reader.readAsDataURL(file);
         });
     }
@@ -439,7 +440,7 @@ let projectController = (function () {
             return previous.then(function () {
                 return uploadFile(project, file).then(function (result) {
                     uploaded++;
-                    item.find('.spinner-border').replaceWith('<span class="fa text-success" aria-label="Качен">&#xf00c;</span>');
+                    item.find('.spinner-border').replaceWith($('<span class="fa text-success">&#xf00c;</span>').attr('aria-label', i18n.t('Качен')));
 
                     if (result && Array.isArray(result.warnings) && result.warnings.length > 0) {
                         warned = true;
@@ -448,13 +449,13 @@ let projectController = (function () {
                         });
                     }
                 }, function (error) {
-                    item.find('.spinner-border').replaceWith('<span class="fa text-danger" aria-label="Грешка">&#xf00d;</span>');
+                    item.find('.spinner-border').replaceWith($('<span class="fa text-danger">&#xf00d;</span>').attr('aria-label', i18n.t('Грешка')));
                     item.append($('<span class="text-danger"></span>').text('– ' + error.message));
                 });
             });
         }, Promise.resolve()).then(function () {
             if (uploaded > 0) {
-                toastr.success(pageHelper.formatCount(uploaded, 'файл беше качен', 'файла бяха качени') + '.');
+                toastr.success(pageHelper.formatCount(uploaded, 'файл беше качен.', 'файла бяха качени.'));
 
                 // Re-render the file list; keep the result rows only if something failed.
                 onDone(uploaded === files.length && !warned ? null : status.children().detach());
@@ -464,9 +465,9 @@ let projectController = (function () {
 
     function deleteFile(project, layer) {
         return pageHelper.confirm({
-            title: 'Изтриване на файл',
-            body: 'Файлът „' + layer.title + '“ ще бъде изтрит от обект „' + project.name + '“.',
-            confirmText: 'Изтриване',
+            title: i18n.t('Изтриване на файл'),
+            body: i18n.t('Файлът „{file}“ ще бъде изтрит от обект „{project}“.', { file: layer.title, project: project.name }),
+            confirmText: i18n.t('Изтриване'),
             danger: true
         }).then(function (confirmed) {
             if (!confirmed) {
@@ -474,7 +475,7 @@ let projectController = (function () {
             }
 
             return projectService.removeProjectDataByFileId(project.id, layer.id).then(function () {
-                toastr.success('Файлът беше изтрит.');
+                toastr.success(i18n.t('Файлът беше изтрит.'));
 
                 return true;
             }, function (error) {
@@ -536,7 +537,7 @@ let projectController = (function () {
                     let crs = map.unsupportedCrs(geojson);
 
                     $('#projection-info').text(crs
-                        ? 'Непозната координатна система: ' + crs
+                        ? i18n.t('Непозната координатна система: {crs}', { crs: crs })
                         : map.projectionLabel(map.detectProjection(geojson)));
 
                     if (crs) {
@@ -546,7 +547,7 @@ let projectController = (function () {
                     try {
                         renderFilePreview(geojson);
                     } catch (e) {
-                        $('#file-preview-map').html('<div class="p-4 text-danger">Файлът не може да бъде показан на картата.</div>');
+                        $('#file-preview-map').html($('<div class="p-4 text-danger"></div>').text(i18n.t('Файлът не може да бъде показан на картата.')));
                     }
                 }
 
@@ -579,7 +580,7 @@ let projectController = (function () {
         let limit = 200000;
 
         $('#raw-json').text(pretty.length > limit
-            ? pretty.slice(0, limit) + '\n\n… (показани са първите ' + pageHelper.formatBytes(limit) + '; изтеглете файла за пълното съдържание)'
+            ? pretty.slice(0, limit) + '\n\n… (' + i18n.t('показани са първите {size}; изтеглете файла за пълното съдържание', { size: pageHelper.formatBytes(limit) }) + ')'
             : pretty);
     }
 
@@ -592,7 +593,7 @@ let projectController = (function () {
             let entries = preview.getLegend();
 
             if (entries.length === 0) {
-                legend.append('<li class="list-group-item text-body-secondary">Файлът няма геообекти.</li>');
+                legend.append($('<li class="list-group-item text-body-secondary"></li>').text(i18n.t('Файлът няма геообекти.')));
             }
 
             entries.forEach(function (entry) {
@@ -629,7 +630,7 @@ let projectController = (function () {
         });
 
         let table = $('#attribute-table').empty();
-        let head = $('<tr><th class="text-body-secondary">#</th><th>Геометрия</th></tr>');
+        let head = $('<tr><th class="text-body-secondary">#</th></tr>').append($('<th></th>').text(i18n.t('Геометрия')));
 
         keys.forEach(key => head.append($('<th></th>').text(key)));
         table.append($('<thead></thead>').append(head));
@@ -640,7 +641,7 @@ let projectController = (function () {
             let geometry = feature.getGeometry();
             let typeLabel = map.typeLabel(feature);
             let row = $('<tr class="attribute-row" tabindex="0"></tr>')
-                .attr('title', 'Покажи на картата')
+                .attr('title', i18n.t('Покажи на картата'))
                 .append($('<td class="text-body-secondary"></td>').text(index + 1))
                 .append($('<td class="text-nowrap"></td>').text((typeLabel || '') + (geometry ? ' (' + geometry.getType() + ')' : '')));
 
@@ -677,10 +678,10 @@ let projectController = (function () {
         let footer = pageHelper.formatCount(features.length, 'геообект', 'геообекта');
 
         if (features.length > MAX_ATTRIBUTE_ROWS) {
-            footer += ' · показани са първите ' + MAX_ATTRIBUTE_ROWS;
+            footer += ' · ' + i18n.t('показани са първите {count}', { count: MAX_ATTRIBUTE_ROWS });
         }
 
-        $('#attribute-footer').text(footer + ' · кликнете ред, за да го покажете на картата');
+        $('#attribute-footer').text(footer + ' · ' + i18n.t('кликнете ред, за да го покажете на картата'));
 
         $('#attribute-search').on('input', function () {
             let query = this.value.trim().toLowerCase();

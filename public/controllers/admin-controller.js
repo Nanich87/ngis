@@ -5,8 +5,8 @@ let adminController = (function () {
     let pageID = 'admin';
 
     const RIGHTS = [
-        { key: 'canRead', label: 'Четене' },
-        { key: 'canWrite', label: 'Запис' },
+        { key: 'canRead', label: 'Четене' },      // translated where shown
+        { key: 'canWrite', label: 'право|Запис' },
         { key: 'isAdmin', label: 'Админ' }
     ];
 
@@ -27,7 +27,7 @@ let adminController = (function () {
             templates.get('admin').then(function (template) {
                 $(container).html(template({}));
 
-                document.title = 'Потребители – nGIS';
+                document.title = i18n.t('Потребители') + ' – nGIS';
 
                 $('#user-search').on('input', function () {
                     filterUsers(this.value);
@@ -36,7 +36,7 @@ let adminController = (function () {
                 initCreateUserModal();
 
                 $('#ux-btn-copy-password').on('click', function () {
-                    pageHelper.copyText($('#password-modal-value').val(), 'Паролата е копирана.');
+                    pageHelper.copyText($('#password-modal-value').val(), i18n.t('Паролата е копирана.'));
                 });
 
                 userService.listUsers().then(function (users) {
@@ -62,7 +62,7 @@ let adminController = (function () {
         let name = $('<div class="fw-medium text-break"></div>').text(user.displayName ? user.displayName + ' · ' + user.email : user.email);
 
         if (isSelf) {
-            name.append(' <span class="badge text-bg-secondary">Вие</span>');
+            name.append(' ', $('<span class="badge text-bg-secondary"></span>').text(i18n.t('Вие')));
         }
 
         let who = $('<div class="min-w-0"></div>').append(
@@ -71,7 +71,7 @@ let adminController = (function () {
         );
 
         if (user.hasPassword === false) {
-            who.append('<span class="badge text-bg-warning mt-1 no-password-badge">Без парола</span>');
+            who.append($('<span class="badge text-bg-warning mt-1 no-password-badge"></span>').text(i18n.t('Без парола')));
         }
 
         let row = $('<tr></tr>')
@@ -82,13 +82,13 @@ let adminController = (function () {
         RIGHTS.forEach(function (right) {
             let input = $('<input class="form-check-input" type="checkbox" role="switch" />')
                 .attr('id', 'right-' + right.key + '-' + user.uid.replace(/[^a-zA-Z0-9_-]/g, '_'))
-                .attr('aria-label', right.label + ' – ' + user.email)
+                .attr('aria-label', i18n.t(right.label) + ' – ' + user.email)
                 .prop('checked', user[right.key]);
 
             let locked = right.key === 'isAdmin' && isSelf;
 
             if (locked) {
-                input.prop('disabled', true).attr('title', 'Не можете да премахнете собствените си администраторски права');
+                input.prop('disabled', true).attr('title', i18n.t('Не можете да премахнете собствените си администраторски права'));
             }
 
             input.on('change', function () {
@@ -100,7 +100,7 @@ let adminController = (function () {
 
                 userService.updateUser(user.uid, changes).then(function (updated) {
                     Object.assign(user, updated);
-                    toastr.success('Правата на ' + user.email + ' са обновени.');
+                    toastr.success(i18n.t('Правата на {email} са обновени.', { email: user.email }));
                 }, function (error) {
                     input.prop('checked', !checked);
                     toastr.error(error.message);
@@ -113,8 +113,9 @@ let adminController = (function () {
                 $('<div class="form-check form-switch d-inline-block m-0"></div>').append(input)));
         });
 
-        let resetButton = $('<button type="button" class="btn btn-sm btn-neutral text-nowrap"><span class="fa">&#xf084;</span> Нова парола</button>')
-            .attr('aria-label', 'Нова парола за ' + user.email);
+        let resetButton = $('<button type="button" class="btn btn-sm btn-neutral text-nowrap"><span class="fa">&#xf084;</span> </button>')
+            .append(document.createTextNode(i18n.t('Нова парола')))
+            .attr('aria-label', i18n.t('Нова парола за {email}', { email: user.email }));
         let actions = $('<div class="d-inline-flex gap-2"></div>').append(resetButton);
 
         resetButton.on('click', function () {
@@ -123,8 +124,8 @@ let adminController = (function () {
 
         if (!isSelf) {
             let deleteButton = $('<button type="button" class="btn btn-sm btn-outline-danger"><span class="fa">&#xf1f8;</span></button>')
-                .attr('aria-label', 'Изтриване на ' + user.email)
-                .attr('title', 'Изтриване');
+                .attr('aria-label', i18n.t('Изтриване на {name}', { name: user.email }))
+                .attr('title', i18n.t('Изтриване'));
 
             deleteButton.on('click', function () {
                 deleteUser(user, row);
@@ -199,7 +200,7 @@ let adminController = (function () {
         let valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 
         $('#new-user-email').toggleClass('is-invalid', !valid);
-        $('#new-user-email-error').text(valid ? '' : 'Въведете валиден email адрес.');
+        $('#new-user-email-error').text(valid ? '' : i18n.t('Въведете валиден email адрес.'));
 
         if (!valid) {
             $('#new-user-email').trigger('focus');
@@ -241,10 +242,11 @@ let adminController = (function () {
         let self = user.uid === currentUser.uid;
 
         pageHelper.confirm({
-            title: 'Нова парола',
-            body: 'Ще бъде генерирана нова парола за ' + user.email + '. Старата спира да важи и потребителят излиза от всички устройства' +
-                (self ? ', включително от това.' : '.'),
-            confirmText: 'Генериране'
+            title: i18n.t('Нова парола'),
+            body: i18n.t(self
+                ? 'Ще бъде генерирана нова парола за {email}. Старата спира да важи и потребителят излиза от всички устройства, включително от това.'
+                : 'Ще бъде генерирана нова парола за {email}. Старата спира да важи и потребителят излиза от всички устройства.', { email: user.email }),
+            confirmText: i18n.t('Генериране')
         }).then(function (confirmed) {
             if (!confirmed) {
                 return;
@@ -268,9 +270,9 @@ let adminController = (function () {
 
     function deleteUser(user, row) {
         pageHelper.confirm({
-            title: 'Изтриване на потребител',
-            body: 'Акаунтът ' + user.email + ' ще бъде изтрит безвъзвратно. Обектите и файловете остават.',
-            confirmText: 'Изтриване',
+            title: i18n.t('Изтриване на потребител'),
+            body: i18n.t('Акаунтът {email} ще бъде изтрит безвъзвратно. Обектите и файловете остават.', { email: user.email }),
+            confirmText: i18n.t('Изтриване'),
             danger: true
         }).then(function (confirmed) {
             if (!confirmed) {
@@ -280,7 +282,7 @@ let adminController = (function () {
             userService.deleteUser(user.uid).then(function () {
                 row.remove();
                 updateSummary();
-                toastr.success('Потребителят ' + user.email + ' беше изтрит.');
+                toastr.success(i18n.t('Потребителят {email} беше изтрит.', { email: user.email }));
             }, function (error) {
                 toastr.error(error.message);
             });

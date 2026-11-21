@@ -7,7 +7,8 @@ let api = (function () {
         let options = {
             method: method,
             credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
+            // Server messages come back in the interface language.
+            headers: { 'Accept': 'application/json', 'Accept-Language': i18n.lang }
         };
 
         if (data !== undefined) {
@@ -22,6 +23,7 @@ let api = (function () {
                 if (!response.ok) {
                     let error = new Error(body.error || ('HTTP ' + response.status));
                     error.status = response.status;
+                    error.field = body.field;   // request field the error is about, if any
 
                     throw error;
                 }

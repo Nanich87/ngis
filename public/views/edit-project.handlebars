@@ -1,6 +1,6 @@
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/#/projects">Обекти</a></li>
+        <li class="breadcrumb-item"><a href="/#/projects">{{t "Обекти"}}</a></li>
         <li class="breadcrumb-item"><a href="/#/project/view/{{slug project.name}}/{{ project.id }}">{{ project.name }}</a></li>
         <li class="breadcrumb-item active text-truncate" aria-current="page">{{ file.title }}</li>
     </ol>
@@ -10,21 +10,21 @@
     <div class="min-w-0">
         <h1 class="page-title text-break">{{ file.title }}</h1>
         <p class="page-subtitle">
-            {{#if stats.valid}}{{count stats.featureCount "геообект" "геообекта"}} · {{/if}}{{bytes stats.size}}{{#if file.created_at}} · качен на {{date file.created_at}}{{/if}}
+            {{#if stats.valid}}{{count stats.featureCount "геообект" "геообекта"}} · {{/if}}{{bytes stats.size}}{{#if file.created_at}} · {{t "качен на {date}" date=(date file.created_at)}}{{/if}}
         </p>
     </div>
     <div class="page-actions">
-        <a href="/#/map/{{ project.id }}" class="btn btn-primary"><span class="fa">&#xf279;</span> Покажи на картата</a>
-        <button type="button" id="ux-btn-download" class="btn btn-neutral"><span class="fa">&#xf019;</span> Изтегляне</button>
+        <a href="/#/map/{{ project.id }}" class="btn btn-primary"><span class="fa">&#xf279;</span> {{t "Покажи на картата"}}</a>
+        <button type="button" id="ux-btn-download" class="btn btn-neutral"><span class="fa">&#xf019;</span> {{t "Изтегляне"}}</button>
         {{#if canWrite}}
-        <button type="button" id="ux-btn-delete" class="btn btn-outline-danger"><span class="fa">&#xf1f8;</span> Изтриване</button>
+        <button type="button" id="ux-btn-delete" class="btn btn-outline-danger"><span class="fa">&#xf1f8;</span> {{t "Изтриване"}}</button>
         {{/if}}
     </div>
 </div>
 
 {{#if stats.valid}}
 <div class="alert alert-warning hidden" id="crs-warning">
-    Файлът е в координатна система <strong class="crs-name"></strong>, която не се поддържа. Поддържат се WGS84, Web Mercator, BGS2005 (CCS2005 и UTM 34N/35N/36N), ETRS89 и WGS84/ETRS89 UTM 34N/35N, затова геообектите може да са на грешно място.
+    {{t "Файлът е в координатна система"}} <strong class="crs-name"></strong>{{t ", която не се поддържа. Поддържат се WGS84, Web Mercator, BGS2005 (CCS2005 и UTM 34N/35N/36N), ETRS89 и WGS84/ETRS89 UTM 34N/35N, затова геообектите може да са на грешно място."}}
 </div>
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
@@ -35,18 +35,18 @@
     <div class="col-lg-4">
         <div class="card h-100">
             <div class="card-header">
-                <h2 class="card-title fs-6 mb-0">Съдържание</h2>
+                <h2 class="card-title fs-6 mb-0">{{t "Съдържание"}}</h2>
             </div>
             <ul class="list-group list-group-flush" id="file-legend"></ul>
-            <div class="card-footer small text-body-secondary">Координати: <span id="projection-info"></span></div>
+            <div class="card-footer small text-body-secondary">{{t "Координати:"}} <span id="projection-info"></span></div>
         </div>
     </div>
 </div>
 
 <div class="card mb-4">
     <div class="card-header d-flex align-items-center gap-2">
-        <h2 class="card-title fs-6 mb-0 me-auto">Атрибути</h2>
-        <input id="attribute-search" type="search" class="form-control form-control-sm attribute-search" placeholder="Филтър…" aria-label="Филтър на атрибутите" />
+        <h2 class="card-title fs-6 mb-0 me-auto">{{t "Атрибути"}}</h2>
+        <input id="attribute-search" type="search" class="form-control form-control-sm attribute-search" placeholder="{{t "Филтър…"}}" aria-label="{{t "Филтър на атрибутите"}}" />
     </div>
     <div class="table-responsive attribute-table-wrapper">
         <table class="table table-sm table-hover mb-0 attribute-table" id="attribute-table"></table>
@@ -54,10 +54,10 @@
     <div class="card-footer small text-body-secondary" id="attribute-footer"></div>
 </div>
 {{else}}
-<div class="alert alert-danger">Файлът не е валиден GeoJSON и не може да бъде показан на картата.</div>
+<div class="alert alert-danger">{{t "Файлът не е валиден GeoJSON и не може да бъде показан на картата."}}</div>
 {{/if}}
 
 <details class="raw-json">
-    <summary>GeoJSON код</summary>
+    <summary>{{t "GeoJSON код"}}</summary>
     <pre class="raw-json-content" id="raw-json"></pre>
 </details>

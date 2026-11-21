@@ -6,6 +6,7 @@ let map = (function () {
 
     const ESRI_ATTRIBUTION = 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics';
 
+    // Labels are translated where they are shown (i18n.t).
     const BASE_MAPS = [
         { id: 'osm', label: 'Карта', title: 'OpenStreetMap' },
         { id: 'satellite', label: 'Сателит', title: 'Сателитна (Esri World Imagery)' },
@@ -58,7 +59,7 @@ let map = (function () {
         return new ol.control.FullScreen({
             label: icon('\uf065'),
             labelActive: icon('\uf066'),
-            tipLabel: 'Цял екран'
+            tipLabel: i18n.t('Цял екран')
         });
     }
 
@@ -103,7 +104,8 @@ let map = (function () {
 
     const GPX_NAME_RESOLUTION = 10;       // GPX waypoint names from about zoom 14
 
-    // Legend metadata + style for every known "<geometry>:<type>" combination.
+    // Legend metadata + style for every known "<geometry>:<type>" combination; labels are translated
+    // where they are shown (i18n.t).
     // swatch: { shape: 'point'|'line'|'polygon'|'text', stroke, fill, dash, width, radius }
     const STYLE_DEFS = {
         'Point:default': {
@@ -606,7 +608,7 @@ let map = (function () {
 
             return {
                 key: key,
-                label: def.label,
+                label: i18n.t(def.label),
                 count: counts[key],
                 swatch: swatchSvg(def.swatch),
                 hidden: hiddenAt(def, resolution)
@@ -708,7 +710,8 @@ let map = (function () {
     function popupHtml(feature, layer) {
         let def = STYLE_DEFS[featureKey(feature)];
         let props = feature.getProperties();
-        let title = props.name || (def ? def.label : 'Обект');
+        let label = def ? i18n.t(def.label) : null;
+        let title = props.name || label || i18n.t('Обект');
         let rows = '';
 
         Object.keys(props).forEach(function (key) {
@@ -719,10 +722,10 @@ let map = (function () {
             }
 
             if (key === 'type' && def) {
-                value = /^cad-/.test(value) ? def.label : def.label + ' (' + value + ')';
+                value = /^(cad|gpx)-/.test(value) ? label : label + ' (' + value + ')';
             }
 
-            rows += '<tr><th>' + escapeHtml(PROPERTY_LABELS[key] || key) + '</th><td>' + escapeHtml(value) + '</td></tr>';
+            rows += '<tr><th>' + escapeHtml(PROPERTY_LABELS[key] ? i18n.t(PROPERTY_LABELS[key]) : key) + '</th><td>' + escapeHtml(value) + '</td></tr>';
         });
 
         return '<div class="ol-popup-title">' + escapeHtml(title) + '</div>' +
@@ -791,7 +794,7 @@ let map = (function () {
         onChange: onChange,
         updateSize: updateSize,
         createPreview: createPreview,
-        typeLabel: feature => (STYLE_DEFS[featureKey(feature)] || {}).label,
+        typeLabel: feature => STYLE_DEFS[featureKey(feature)] ? i18n.t(STYLE_DEFS[featureKey(feature)].label) : undefined,
         detectProjection: detectProjection,
         projectionLabel: projectionLabel,
         unsupportedCrs: unsupportedCrs
