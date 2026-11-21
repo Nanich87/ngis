@@ -72,7 +72,7 @@ let mapController = (function () {
                             checkbox.prop('checked', true);
                             toggleProject(preselectedProjectId, true, true, token);
                         } else {
-                            toastr.error(i18n.t('Няма такъв обект!'));
+                            toastr.error(i18n.t('Обектът не е намерен.'));
                         }
                     }
                 });

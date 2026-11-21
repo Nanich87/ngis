@@ -38,14 +38,14 @@ let authController = (function () {
         let password = $('#password').val();
 
         if (!validationHelper.validateEmail(email) || email.indexOf('@') === -1) {
-            toastr.error(i18n.t('Невалиден Email адрес!'));
+            toastr.error(i18n.t('Въведете валиден имейл адрес.'));
             $('#email').trigger('focus');
 
             return;
         }
 
         if (!validationHelper.validatePassword(password)) {
-            toastr.error(i18n.t('Въведете парола!'));
+            toastr.error(i18n.t('Въведете паролата си.'));
             $('#password').trigger('focus');
 
             return;
@@ -54,7 +54,7 @@ let authController = (function () {
         let button = $('#ux-btn-submit').prop('disabled', true);
 
         authService.signIn(email, password).then(function () {
-            toastr.success(i18n.t('Успешен вход'));
+            toastr.success(i18n.t('Влязохте успешно.'));
 
             window.location.href = '#/map';
         }, function (error) {

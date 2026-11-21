@@ -85,7 +85,7 @@ let userController = (function () {
 
             toastr.success(i18n.t('Данните бяха записани.'));
         }, function (error) {
-            toastr.error(error.message || i18n.t('Възникнала е грешка при записването на данните!'));
+            toastr.error(error.message || i18n.t('Данните не можаха да бъдат записани.'));
         }).then(function () {
             button.prop('disabled', false);
         });
@@ -105,7 +105,7 @@ let userController = (function () {
 
         let invalid = fieldError('#current-password', current ? null : i18n.t('Въведете текущата парола.'));
         invalid = fieldError('#new-password', next.length < 10 ? i18n.t('Паролата трябва да е поне 10 символа.')
-            : next === current ? i18n.t('Новата парола съвпада с текущата.') : null) || invalid;
+            : next === current ? i18n.t('Новата парола трябва да е различна от текущата.') : null) || invalid;
         invalid = fieldError('#new-password-repeat', repeat !== next ? i18n.t('Паролите не съвпадат.') : null) || invalid;
 
         if (invalid) {

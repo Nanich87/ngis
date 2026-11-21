@@ -200,7 +200,7 @@ let adminController = (function () {
         let valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 
         $('#new-user-email').toggleClass('is-invalid', !valid);
-        $('#new-user-email-error').text(valid ? '' : i18n.t('Въведете валиден email адрес.'));
+        $('#new-user-email-error').text(valid ? '' : i18n.t('Въведете валиден имейл адрес.'));
 
         if (!valid) {
             $('#new-user-email').trigger('focus');

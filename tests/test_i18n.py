@@ -189,8 +189,8 @@ class ApiLanguageTests(ServerTestCase):
 
     def test_errors_follow_accept_language(self):
         writer = self.client('writer@test.bg')
-        for lang, text in ((None, 'Нямате администраторски права!'), ('bg', 'Нямате администраторски права!'),
-                           ('en', 'You do not have administrator rights!')):
+        for lang, text in ((None, 'Само администратор може да направи това.'), ('bg', 'Само администратор може да направи това.'),
+                           ('en', 'Only an administrator can do this.')):
             with self.subTest(lang=lang):
                 headers = {'Accept-Language': lang} if lang else {}
                 r = writer.request('POST', '/api/projects', body={'name': 'Lang-test', 'year': '2024'}, headers=headers)
@@ -201,7 +201,7 @@ class ApiLanguageTests(ServerTestCase):
         r = self.client('reader@test.bg').request('POST', '/api/me/password', headers={'Accept-Language': 'en'},
                                                   body={'currentPassword': 'wrong-password', 'newPassword': 'new-password-1'})
         self.assertEqual(r.status, 400)
-        self.assertEqual(r.json, {'error': 'The current password is wrong!', 'field': 'currentPassword'})
+        self.assertEqual(r.json, {'error': 'The current password is wrong.', 'field': 'currentPassword'})
 
     def test_upload_warnings_are_translated(self):
         import base64
